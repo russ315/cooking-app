@@ -1,0 +1,24 @@
+openapi: 3.0.0
+info:
+  title: Cooking App API
+  version: 1.0.0
+  description: API documentation for the Cooking App recipe recommendation system
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            text/plain:
+              example: OK
+  # TODO: Add more endpoints
+  # /auth/register
+  # /auth/login
+  # /recipes/search
+  # /inventory
+  # etc.
