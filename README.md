@@ -24,8 +24,10 @@ cooking-app/
 ├── api/
 │   └── swagger.yaml     # API documentation 
 ├── docs/
-│   ├── architecture.md  # System design description 
-│   └── diagrams/        # Use-Case, ERD, and UML files 
+│   ├── architecture.md      # System design description 
+│   ├── project-proposal.md   # Project proposal document
+│   ├── gantt-chart.md        # Project timeline and milestones
+│   └── diagrams/             # Use-Case, ERD, and UML files 
 ├── .gitignore
 ├── go.mod               # Dependency management
 └── README.md            # Project proposal and Gantt chart
@@ -56,11 +58,11 @@ The server will start on `http://localhost:8080`
 
 ### Project Proposal
 
-[Add project proposal details here]
+See `docs/project-proposal.md` for the complete project proposal.
 
 ### Gantt Chart
 
-[Add Gantt chart here]
+See `docs/gantt-chart.md` for the detailed project timeline and milestones.
 
 ## API Documentation
 
