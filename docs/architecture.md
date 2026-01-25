@@ -26,18 +26,15 @@ This document describes the system design and architecture of the Cooking App.
 - Migration scripts
 - Database schema definitions
 
-## Database Schema
 
-[Add ERD and database schema details here]
 
-## API Design
 
-[Add API design details here]
+1. **Use-Case Diagram** (`use-case-diagram.pdf` or `.png`)
+![usecase](/docs/diagrams/usecase.png)
 
-## Use Cases
+2. **ERD (Entity Relationship Diagram)** (`erd.pdf` or `.png`)
+![erd](/docs/diagrams/relationship.png)
 
-[Add use case diagrams and descriptions here]
+3. **UML Diagrams** (`uml-diagrams.pdf` or `.png`)
+![uml](/docs/diagrams/uml.png)
 
-## UML Diagrams
-
-[Add UML class diagrams and sequence diagrams here]

@@ -31,16 +31,11 @@ Our application provides:
 ## Technical Stack
 
 - **Backend**: Go (Golang)
-- **Database**: PostgreSQL (or similar relational database)
+- **Database**: PostgreSQL
 - **Authentication**: JWT (JSON Web Tokens)
 - **API Documentation**: OpenAPI/Swagger
 - **Version Control**: Git with feature branch workflow
 
-## Team Structure
-
-- **Member 1**: Authentication module (`feature/auth-member1`)
-- **Member 2**: Database module (`feature/db-member2`)
-- **Member 3**: API module (`feature/api-member3`)
 
 ## Success Criteria
 

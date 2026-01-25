@@ -72,6 +72,3 @@ See `api/swagger.yaml` for detailed API documentation.
 
 See `docs/architecture.md` for system design and architecture details.
 
-## License
-
-[Add license information]

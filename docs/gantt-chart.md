@@ -13,7 +13,7 @@
 **Status**: In Progress
 
 ### Phase 2: Database Module (Week 2-3)
-**Branch**: `feature/db-member2`
+**Branch**: `feature/ruslan`
 - [ ] Design database schema
 - [ ] Create ERD diagram
 - [ ] Set up database connection
@@ -24,7 +24,7 @@
 **Status**: Pending
 
 ### Phase 3: Authentication Module (Week 3-4)
-**Branch**: `feature/auth-member1`
+**Branch**: `feature/alina`
 - [ ] Design authentication flow
 - [ ] Implement user registration
 - [ ] Implement user login
@@ -36,7 +36,7 @@
 **Status**: Pending
 
 ### Phase 4: API Module (Week 4-5)
-**Branch**: `feature/api-member3`
+**Branch**: `feature/abilmansur`
 - [ ] Design API endpoints
 - [ ] Implement route handlers
 - [ ] Add request validation
@@ -78,12 +78,12 @@
 
 | Milestone | Target Date | Deliverable |
 |-----------|-------------|-------------|
-| M1: Project Setup | Week 1 | Repository with structure |
-| M2: Database Ready | Week 3 | Database schema and migrations |
-| M3: Auth Complete | Week 4 | Working authentication |
-| M4: API Complete | Week 5 | All endpoints documented |
-| M5: Core Features | Week 7 | Recipe and inventory modules |
-| M6: Final Release | Week 8 | Complete application |
+| M1: Project Setup | Week 8 | Repository with structure |
+| M2: Database Ready | Week 8 | Database schema and migrations |
+| M3: Auth Complete | Week 8 | Working authentication |
+| M4: API Complete | Week 9 | All endpoints documented |
+| M5: Core Features | Week 9 | Recipe and inventory modules |
+| M6: Final Release | Week 10 | Complete application |
 
 ## Dependencies
 
