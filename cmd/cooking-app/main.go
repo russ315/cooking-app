@@ -1,61 +1,160 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"cooking-app/internal/handler"
-	"cooking-app/internal/logger"
-	"cooking-app/internal/repository"
-
-	"github.com/gorilla/mux"
+	"recipe-backend/config"
+	"recipe-backend/internal/handlers"
+	"recipe-backend/internal/middleware"
+	"recipe-backend/internal/repository"
+	"recipe-backend/internal/service"
+	"recipe-backend/pkg/jwt"
 )
 
 func main() {
-	fmt.Println("===========================================")
-	fmt.Println("Cooking App - User Profile Management API")
-	fmt.Println("Assignment 4 - Milestone 2")
-	fmt.Println("Author: Abilmansur")
-	fmt.Println("===========================================")
-	fmt.Println()
+	// Load configuration
+	cfg := config.Load()
 
-	userRepo := repository.NewUserRepository()
-	fmt.Println("✓ In-memory user repository initialized")
+	// Initialize JWT manager
+	jwtManager := jwt.NewJWTManager(cfg.JWT.Secret, cfg.JWT.TokenDuration)
 
-	activityLogger := logger.NewActivityLogger()
-	fmt.Println("✓ Activity logger with goroutine started")
+	// Initialize repositories
+	userRepo := repository.NewInMemoryUserRepository()
 
-	userHandler := handler.NewUserHandler(userRepo, activityLogger)
+	// Initialize services
+	authService := service.NewAuthService(userRepo, jwtManager)
 
-	router := mux.NewRouter()
+	// Initialize handlers
+	authHandler := handlers.NewAuthHandler(authService)
 
-	router.HandleFunc("/api/profile/{id:[0-9]+}", userHandler.GetProfile).Methods("GET")
-	router.HandleFunc("/api/profile/{id:[0-9]+}", userHandler.UpdateProfile).Methods("PUT")
-	router.HandleFunc("/api/profile/{id:[0-9]+}", userHandler.DeleteProfile).Methods("DELETE")
-	router.HandleFunc("/api/profiles", userHandler.GetAllProfiles).Methods("GET")
-	router.HandleFunc("/api/profile", userHandler.CreateProfile).Methods("POST")
+	// Setup router
+	mux := http.NewServeMux()
 
-	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	// Public routes (no authentication required)
+	mux.HandleFunc("/api/auth/register", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			authHandler.Register(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.HandleFunc("/api/auth/login", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			authHandler.Login(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.HandleFunc("/api/auth/validate", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			authHandler.ValidateToken(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Protected routes (authentication required)
+	protectedMux := http.NewServeMux()
+	protectedMux.HandleFunc("/api/auth/profile", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			authHandler.GetProfile(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Health check endpoint
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
-	}).Methods("GET")
+		w.Write([]byte(`{
+			"status": "healthy",
+			"service": "recipe-backend",
+			"timestamp": "` + time.Now().Format(time.RFC3339) + `",
+			"version": "1.0.0"
+		}`))
+	})
 
-	fmt.Println()
-	fmt.Println(" Available endpoints:")
-	fmt.Println("  GET    /health               - Health check")
-	fmt.Println("  GET    /api/profiles         - Get all profiles")
-	fmt.Println("  GET    /api/profile/{id}     - Get profile by ID")
-	fmt.Println("  POST   /api/profile          - Create new profile")
-	fmt.Println("  PUT    /api/profile/{id}     - Update profile")
-	fmt.Println("  DELETE /api/profile/{id}     - Delete profile")
-	fmt.Println()
+	// Root endpoint with API documentation
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{
+			"message": "Recipe Management API",
+			"version": "1.0.0",
+			"endpoints": {
+				"auth": {
+					"register": "POST /api/auth/register",
+					"login": "POST /api/auth/login",
+					"validate": "GET /api/auth/validate",
+					"profile": "GET /api/auth/profile (requires auth)"
+				},
+				"health": "GET /health"
+			},
+			"documentation": "See README.md for detailed API documentation"
+		}`))
+	})
 
-	port := "8080"
-	fmt.Printf("🚀 Server starting on http://localhost:%s\n", port)
-	fmt.Println()
+	// Combine public and protected routes
+	mux.Handle("/api/auth/profile", middleware.AuthMiddleware(jwtManager)(protectedMux))
 
-	if err := http.ListenAndServe(":"+port, router); err != nil {
-		log.Fatal("Failed to start server:", err)
+	// Apply global middleware
+	handler := middleware.RecoveryMiddleware(
+		middleware.Logger(
+			middleware.CORS(
+				middleware.RateLimiter(mux),
+			),
+		),
+	)
+
+	// Create server
+	server := &http.Server{
+		Addr:         ":" + cfg.Server.Port,
+		Handler:      handler,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
+
+	// Graceful shutdown handling
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	// Start server in a goroutine
+	go func() {
+		log.Printf("🚀 Server starting on http://%s:%s", cfg.Server.Host, cfg.Server.Port)
+		log.Printf("📝 Environment: %s", cfg.Server.Env)
+		log.Printf("💚 Health check: http://%s:%s/health", cfg.Server.Host, cfg.Server.Port)
+		log.Printf("🔐 Auth endpoints:")
+		log.Printf("   - POST http://%s:%s/api/auth/register", cfg.Server.Host, cfg.Server.Port)
+		log.Printf("   - POST http://%s:%s/api/auth/login", cfg.Server.Host, cfg.Server.Port)
+		log.Printf("   - GET  http://%s:%s/api/auth/validate", cfg.Server.Host, cfg.Server.Port)
+		log.Printf("   - GET  http://%s:%s/api/auth/profile (protected)", cfg.Server.Host, cfg.Server.Port)
+		log.Println("Press Ctrl+C to stop the server")
+		
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server failed to start: %v", err)
+		}
+	}()
+
+	// Wait for interrupt signal
+	<-stop
+
+	log.Println("\n🛑 Shutting down server gracefully...")
+
+	// Shutdown auth service background processes
+	authService.Shutdown()
+
+	log.Println("✅ Server stopped")
 }

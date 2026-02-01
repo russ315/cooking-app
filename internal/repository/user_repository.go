@@ -2,47 +2,84 @@ package repository
 
 import (
 	"errors"
+	"strings"
 	"sync"
 	"time"
 
-	"cooking-app/internal/models"
+	"recipe-backend/internal/models"
 )
 
 var (
-	ErrUserNotFound = errors.New("user not found")
+	ErrUserNotFound      = errors.New("user not found")
+	ErrUserAlreadyExists = errors.New("user already exists")
+	ErrEmailAlreadyExists = errors.New("email already exists")
+	ErrUsernameAlreadyExists = errors.New("username already exists")
 )
 
-// UserRepository хранит пользователей в памяти (без БД)
-type UserRepository struct {
-	mu     sync.RWMutex // Mutex для thread-safe доступа (Assignment 4)
-	users  map[int]*models.User
-	nextID int
+// UserRepository interface defines the contract for user data operations
+type UserRepository interface {
+	Create(user *models.User) error
+	FindByID(id int) (*models.User, error)
+	FindByEmail(email string) (*models.User, error)
+	FindByUsername(username string) (*models.User, error)
+	FindAll() ([]*models.User, error)
+	Update(user *models.User) error
+	Delete(id int) error
 }
 
-// NewUserRepository создает новый репозиторий
-func NewUserRepository() *UserRepository {
-	repo := &UserRepository{
-		users:  make(map[int]*models.User),
-		nextID: 1,
-	}
-
-	// Добавляем тестовые данные
-	repo.users[1] = &models.User{
-		ID:        1,
-		Username:  "john_doe",
-		Email:     "john@example.com",
-		FirstName: "John",
-		LastName:  "Doe",
-		Bio:       "Test user",
-		CreatedAt: time.Now(),
-	}
-	repo.nextID = 2
-
-	return repo
+// InMemoryUserRepository implements UserRepository with thread-safe in-memory storage
+type InMemoryUserRepository struct {
+	mu         sync.RWMutex
+	users      map[int]*models.User
+	emailIndex map[string]int
+	usernameIndex map[string]int
+	nextID     int
 }
 
-// GetByID получает пользователя по ID (thread-safe с RLock)
-func (r *UserRepository) GetByID(id int) (*models.User, error) {
+// NewInMemoryUserRepository creates a new in-memory user repository
+func NewInMemoryUserRepository() *InMemoryUserRepository {
+	return &InMemoryUserRepository{
+		users:      make(map[int]*models.User),
+		emailIndex: make(map[string]int),
+		usernameIndex: make(map[string]int),
+		nextID:     1,
+	}
+}
+
+// Create adds a new user to the repository
+func (r *InMemoryUserRepository) Create(user *models.User) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Check if email already exists
+	normalizedEmail := strings.ToLower(user.Email)
+	if _, exists := r.emailIndex[normalizedEmail]; exists {
+		return ErrEmailAlreadyExists
+	}
+
+	// Check if username already exists
+	normalizedUsername := strings.ToLower(user.Username)
+	if _, exists := r.usernameIndex[normalizedUsername]; exists {
+		return ErrUsernameAlreadyExists
+	}
+
+	// Assign ID and timestamps
+	user.ID = r.nextID
+	r.nextID++
+	now := time.Now()
+	user.CreatedAt = now
+	user.UpdatedAt = now
+
+	// Store user
+	r.users[user.ID] = user
+	r.emailIndex[normalizedEmail] = user.ID
+	r.usernameIndex[normalizedUsername] = user.ID
+
+	return nil
+}
+
+// FindByID retrieves a user by their ID
+func (r *InMemoryUserRepository) FindByID(id int) (*models.User, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -50,11 +87,40 @@ func (r *UserRepository) GetByID(id int) (*models.User, error) {
 	if !exists {
 		return nil, ErrUserNotFound
 	}
+
 	return user, nil
 }
 
-// GetAll возвращает всех пользователей
-func (r *UserRepository) GetAll() []*models.User {
+// FindByEmail retrieves a user by their email
+func (r *InMemoryUserRepository) FindByEmail(email string) (*models.User, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	normalizedEmail := strings.ToLower(email)
+	userID, exists := r.emailIndex[normalizedEmail]
+	if !exists {
+		return nil, ErrUserNotFound
+	}
+
+	return r.users[userID], nil
+}
+
+// FindByUsername retrieves a user by their username
+func (r *InMemoryUserRepository) FindByUsername(username string) (*models.User, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	normalizedUsername := strings.ToLower(username)
+	userID, exists := r.usernameIndex[normalizedUsername]
+	if !exists {
+		return nil, ErrUserNotFound
+	}
+
+	return r.users[userID], nil
+}
+
+// FindAll retrieves all users
+func (r *InMemoryUserRepository) FindAll() ([]*models.User, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -62,48 +128,61 @@ func (r *UserRepository) GetAll() []*models.User {
 	for _, user := range r.users {
 		users = append(users, user)
 	}
-	return users
+
+	return users, nil
 }
 
-// Create создает нового пользователя (thread-safe с Lock)
-func (r *UserRepository) Create(user *models.User) *models.User {
+// Update updates an existing user
+func (r *InMemoryUserRepository) Update(user *models.User) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	user.ID = r.nextID
-	user.CreatedAt = time.Now()
-	r.users[user.ID] = user
-	r.nextID++
+	existingUser, exists := r.users[user.ID]
+	if !exists {
+		return ErrUserNotFound
+	}
 
-	return user
+	// Update timestamp
+	user.UpdatedAt = time.Now()
+	user.CreatedAt = existingUser.CreatedAt // Preserve original creation time
+
+	// Update user
+	r.users[user.ID] = user
+
+	return nil
 }
 
-// Update обновляет пользователя (thread-safe с Lock)
-func (r *UserRepository) Update(id int, req *models.UpdateUserRequest) (*models.User, error) {
+// Delete removes a user from the repository
+func (r *InMemoryUserRepository) Delete(id int) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	user, exists := r.users[id]
 	if !exists {
-		return nil, ErrUserNotFound
-	}
-
-	user.FirstName = req.FirstName
-	user.LastName = req.LastName
-	user.Bio = req.Bio
-
-	return user, nil
-}
-
-// Delete удаляет пользователя (thread-safe с Lock)
-func (r *UserRepository) Delete(id int) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if _, exists := r.users[id]; !exists {
 		return ErrUserNotFound
 	}
 
+	// Remove from indexes
+	normalizedEmail := strings.ToLower(user.Email)
+	normalizedUsername := strings.ToLower(user.Username)
+	delete(r.emailIndex, normalizedEmail)
+	delete(r.usernameIndex, normalizedUsername)
 	delete(r.users, id)
+
 	return nil
+}
+
+// RecipeRepository interface (placeholder for future implementation)
+type RecipeRepository interface {
+	Create(recipe *models.Recipe) error
+	FindByID(id int) (*models.Recipe, error)
+	FindAll() ([]*models.Recipe, error)
+	Search(query string) ([]*models.Recipe, error)
+}
+
+// IngredientRepository interface (placeholder for future implementation)
+type IngredientRepository interface {
+	Create(ingredient *models.Ingredient) error
+	FindByID(id int) (*models.Ingredient, error)
+	FindAll() ([]*models.Ingredient, error)
 }

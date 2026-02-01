@@ -17,29 +17,25 @@ vendor/
 # Go workspace file
 go.work
 
-# IDE specific files
-.idea/
+# Environment variables
+.env
+
+# IDE
 .vscode/
+.idea/
 *.swp
 *.swo
 *~
 
-# Environment variables
-.env
-.env.local
+# OS
+.DS_Store
+Thumbs.db
 
 # Build output
 bin/
+build/
 dist/
-
-# Database files
-*.db
-*.sqlite
-*.sqlite3
 
 # Logs
 *.log
-
-# OS specific
-.DS_Store
-Thumbs.db
+logs/
