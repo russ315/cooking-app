@@ -1,8 +1,8 @@
 package repository
 
 import (
+	"database/sql"
 	"errors"
-	"sync"
 	"time"
 
 	"cooking-app/internal/models"
@@ -12,98 +12,96 @@ var (
 	ErrUserNotFound = errors.New("user not found")
 )
 
-// UserRepository хранит пользователей в памяти (без БД)
+// UserRepository stores users in PostgreSQL (thread-safe via connection pool).
 type UserRepository struct {
-	mu     sync.RWMutex // Mutex для thread-safe доступа (Assignment 4)
-	users  map[int]*models.User
-	nextID int
+	db *sql.DB
 }
 
-// NewUserRepository создает новый репозиторий
-func NewUserRepository() *UserRepository {
-	repo := &UserRepository{
-		users:  make(map[int]*models.User),
-		nextID: 1,
-	}
-
-	// Добавляем тестовые данные
-	repo.users[1] = &models.User{
-		ID:        1,
-		Username:  "john_doe",
-		Email:     "john@example.com",
-		FirstName: "John",
-		LastName:  "Doe",
-		Bio:       "Test user",
-		CreatedAt: time.Now(),
-	}
-	repo.nextID = 2
-
-	return repo
+// NewUserRepository creates a new repository backed by PostgreSQL.
+func NewUserRepository(db *sql.DB) *UserRepository {
+	return &UserRepository{db: db}
 }
 
-// GetByID получает пользователя по ID (thread-safe с RLock)
+// GetByID returns a user by ID.
 func (r *UserRepository) GetByID(id int) (*models.User, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	user, exists := r.users[id]
-	if !exists {
-		return nil, ErrUserNotFound
+	row := r.db.QueryRow(`SELECT id, username, email, first_name, last_name, bio, created_at
+		FROM users WHERE id = $1`, id)
+	var u models.User
+	var firstName, lastName, bio sql.NullString
+	err := row.Scan(&u.ID, &u.Username, &u.Email, &firstName, &lastName, &bio, &u.CreatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
 	}
-	return user, nil
+	u.FirstName = firstName.String
+	u.LastName = lastName.String
+	u.Bio = bio.String
+	return &u, nil
 }
 
-// GetAll возвращает всех пользователей
+// GetAll returns all users.
 func (r *UserRepository) GetAll() []*models.User {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	rows, err := r.db.Query(`SELECT id, username, email, first_name, last_name, bio, created_at FROM users ORDER BY id`)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
 
-	users := make([]*models.User, 0, len(r.users))
-	for _, user := range r.users {
-		users = append(users, user)
+	var users []*models.User
+	for rows.Next() {
+		var u models.User
+		var firstName, lastName, bio sql.NullString
+		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &firstName, &lastName, &bio, &u.CreatedAt); err != nil {
+			continue
+		}
+		u.FirstName = firstName.String
+		u.LastName = lastName.String
+		u.Bio = bio.String
+		users = append(users, &u)
 	}
 	return users
 }
 
-// Create создает нового пользователя (thread-safe с Lock)
+// Create inserts a new user and returns it with ID and CreatedAt set.
 func (r *UserRepository) Create(user *models.User) *models.User {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	user.ID = r.nextID
-	user.CreatedAt = time.Now()
-	r.users[user.ID] = user
-	r.nextID++
-
+	var id int
+	var createdAt time.Time
+	err := r.db.QueryRow(`INSERT INTO users (username, email, first_name, last_name, bio)
+		VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at`,
+		user.Username, user.Email, user.FirstName, user.LastName, user.Bio).Scan(&id, &createdAt)
+	if err != nil {
+		return nil
+	}
+	user.ID = id
+	user.CreatedAt = createdAt
 	return user
 }
 
-// Update обновляет пользователя (thread-safe с Lock)
+// Update updates first_name, last_name, bio by ID.
 func (r *UserRepository) Update(id int, req *models.UpdateUserRequest) (*models.User, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	user, exists := r.users[id]
-	if !exists {
+	res, err := r.db.Exec(`UPDATE users SET first_name = $1, last_name = $2, bio = $3 WHERE id = $4`,
+		req.FirstName, req.LastName, req.Bio, id)
+	if err != nil {
+		return nil, err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
 		return nil, ErrUserNotFound
 	}
-
-	user.FirstName = req.FirstName
-	user.LastName = req.LastName
-	user.Bio = req.Bio
-
-	return user, nil
+	return r.GetByID(id)
 }
 
-// Delete удаляет пользователя (thread-safe с Lock)
+// Delete removes a user by ID.
 func (r *UserRepository) Delete(id int) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if _, exists := r.users[id]; !exists {
+	res, err := r.db.Exec("DELETE FROM users WHERE id = $1", id)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
 		return ErrUserNotFound
 	}
-
-	delete(r.users, id)
 	return nil
 }

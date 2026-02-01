@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
+	"cooking-app/internal/db"
 	"cooking-app/internal/handler"
 	"cooking-app/internal/logger"
 	"cooking-app/internal/recipe"
@@ -18,12 +20,32 @@ import (
 func main() {
 	fmt.Println("===========================================")
 	fmt.Println("Cooking App - Assignment 4 Milestone 2")
-	fmt.Println("Recipe Search Logic + User Profile API")
+	fmt.Println("Recipe Search Logic + User Profile API (PostgreSQL)")
 	fmt.Println("===========================================")
 	fmt.Println()
 
-	userRepo := repository.NewUserRepository()
-	recipeRepo := repository.NewRecipeRepository()
+	connURL := os.Getenv("DATABASE_URL")
+	if connURL == "" {
+		connURL = "postgres://postgres:postgres@localhost:5432/cooking?sslmode=disable"
+		fmt.Println("Using default DATABASE_URL (set DATABASE_URL to override)")
+	}
+	database, err := db.Open(connURL)
+	if err != nil {
+		fmt.Println()
+		fmt.Println("PostgreSQL connection failed. Common causes:")
+		fmt.Println("  - Wrong password: set DATABASE_URL with your postgres user and password")
+		fmt.Println("  - Example (PowerShell): $env:DATABASE_URL=\"postgres://postgres:YOUR_PASSWORD@localhost:5432/cooking?sslmode=disable\"")
+		fmt.Println("  - Create database first: createdb cooking")
+		fmt.Println()
+		log.Fatal("Database connection failed:", err)
+	}
+	defer database.Close()
+	if err := db.Migrate(database); err != nil {
+		log.Fatal("Database migrate failed:", err)
+	}
+
+	userRepo := repository.NewUserRepository(database)
+	recipeRepo := repository.NewRecipeRepository(database)
 	activityLogger := logger.NewActivityLogger()
 	searchService := recipe.NewSearchService(recipeRepo)
 
