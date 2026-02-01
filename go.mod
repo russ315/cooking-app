@@ -1,3 +1,5 @@
-module github.com/your-team/cooking-app
+module cooking-app
 
 go 1.21
+
+require github.com/gorilla/mux v1.8.1
