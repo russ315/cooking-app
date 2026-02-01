@@ -46,13 +46,15 @@ cooking-app/
 go mod download
 ```
 
-### Running the Application
+### Running the Application (Assignment 4)
+
+From the project root:
 
 ```bash
-go run cmd/cooking-app/main.go
+go run .
 ```
 
-The server will start on `http://localhost:8080`
+The server will start on `http://localhost:8080`. You can also run `go run ./cmd/cooking-app` for the same behavior.
 
 ## Development
 
@@ -63,6 +65,28 @@ See `docs/project-proposal.md` for the complete project proposal.
 ### Gantt Chart
 
 See `docs/gantt-chart.md` for the detailed project timeline and milestones.
+
+## Assignment 4 – Milestone 2 (Core System)
+
+This milestone implements:
+
+- **Backend**: HTTP server (Gorilla Mux), JSON input/output, 10+ endpoints (user profile + recipe search).
+- **Data model**: User, Recipe, Ingredient, RecipeIngredient (ERD). CRUD for User and Recipe. Thread-safe in-memory storage.
+- **Recipe Search Logic**: Search by name (`GET /api/recipes?search=egg`), search by ingredients (`GET /api/recipes?ingredients=egg,flour`), list/get/create/update/delete recipes.
+- **Concurrency**: Activity logger goroutine (channel-based); recipe search index updater goroutine (background reindex on recipe changes).
+
+### Core features (Recipe Search)
+
+| Feature | Endpoint | Description |
+|--------|----------|-------------|
+| List recipes | `GET /api/recipes` | All recipes |
+| Search by name | `GET /api/recipes?search=...` | Recipes whose name/description contain the query |
+| Search by ingredients | `GET /api/recipes?ingredients=egg,flour` | Recipes that contain all listed ingredients |
+| Get recipe | `GET /api/recipes/{id}` | Recipe by ID |
+| Create recipe | `POST /api/recipes` | Create recipe (JSON body) |
+| Update recipe | `PUT /api/recipes/{id}` | Update recipe |
+| Delete recipe | `DELETE /api/recipes/{id}` | Delete recipe |
+| List ingredients | `GET /api/ingredients` | All ingredients |
 
 ## API Documentation
 
