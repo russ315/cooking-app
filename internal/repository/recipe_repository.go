@@ -1,9 +1,10 @@
 package repository
 
 import (
+	"database/sql"
 	"errors"
+	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"cooking-app/internal/models"
@@ -13,201 +14,174 @@ var (
 	ErrRecipeNotFound = errors.New("recipe not found")
 )
 
-// RecipeRepository stores recipes and ingredients in memory (thread-safe, matches ERD)
+// RecipeRepository stores recipes and ingredients in PostgreSQL.
 type RecipeRepository struct {
-	mu         sync.RWMutex
-	recipes    map[int]*models.Recipe
-	ingredients map[int]*models.Ingredient
-	nextRecipeID int
-	nextIngredientID int
+	db *sql.DB
 }
 
-// NewRecipeRepository creates a new repository with seed data
-func NewRecipeRepository() *RecipeRepository {
-	repo := &RecipeRepository{
-		recipes:     make(map[int]*models.Recipe),
-		ingredients: make(map[int]*models.Ingredient),
-		nextRecipeID:    1,
-		nextIngredientID: 1,
-	}
-	repo.seedData()
-	return repo
+// NewRecipeRepository creates a new repository backed by PostgreSQL.
+func NewRecipeRepository(db *sql.DB) *RecipeRepository {
+	return &RecipeRepository{db: db}
 }
 
-func (r *RecipeRepository) seedData() {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	// Seed ingredients
-	ingNames := []string{"Eggs", "Flour", "Milk", "Butter", "Sugar", "Salt", "Chicken", "Tomato", "Onion", "Garlic"}
-	for _, name := range ingNames {
-		ing := &models.Ingredient{ID: r.nextIngredientID, Name: name}
-		r.ingredients[r.nextIngredientID] = ing
-		r.nextIngredientID++
+// scanRecipe scans a recipe row and loads ingredients in a second query (or we could use a join and group).
+func (r *RecipeRepository) scanRecipe(row *sql.Row) (*models.Recipe, error) {
+	var rec models.Recipe
+	var desc, instructions sql.NullString
+	err := row.Scan(&rec.ID, &rec.Name, &desc, &instructions, &rec.PrepTimeMin, &rec.CookTimeMin, &rec.CreatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrRecipeNotFound
+		}
+		return nil, err
 	}
-
-	// Seed recipes
-	r.recipes[1] = &models.Recipe{
-		ID:           1,
-		Name:         "Scrambled Eggs",
-		Description:  "Simple fluffy scrambled eggs",
-		Instructions: "Beat eggs, add salt. Cook in butter on low heat, stir gently.",
-		PrepTimeMin:  2,
-		CookTimeMin:  5,
-		Ingredients: []models.RecipeIngredient{
-			{RecipeID: 1, IngredientID: 1, Quantity: "3", Ingredient: models.Ingredient{ID: 1, Name: "Eggs"}},
-			{RecipeID: 1, IngredientID: 6, Quantity: "pinch", Ingredient: models.Ingredient{ID: 6, Name: "Salt"}},
-			{RecipeID: 1, IngredientID: 4, Quantity: "1 tbsp", Ingredient: models.Ingredient{ID: 4, Name: "Butter"}},
-		},
-		CreatedAt: time.Now(),
-	}
-	r.recipes[2] = &models.Recipe{
-		ID:           2,
-		Name:         "Pancakes",
-		Description:  "Classic breakfast pancakes",
-		Instructions: "Mix flour, milk, eggs. Cook on griddle until bubbles form, flip.",
-		PrepTimeMin:  5,
-		CookTimeMin:  10,
-		Ingredients: []models.RecipeIngredient{
-			{RecipeID: 2, IngredientID: 1, Quantity: "2", Ingredient: models.Ingredient{ID: 1, Name: "Eggs"}},
-			{RecipeID: 2, IngredientID: 2, Quantity: "1 cup", Ingredient: models.Ingredient{ID: 2, Name: "Flour"}},
-			{RecipeID: 2, IngredientID: 3, Quantity: "1 cup", Ingredient: models.Ingredient{ID: 3, Name: "Milk"}},
-			{RecipeID: 2, IngredientID: 5, Quantity: "2 tbsp", Ingredient: models.Ingredient{ID: 5, Name: "Sugar"}},
-			{RecipeID: 2, IngredientID: 4, Quantity: "2 tbsp", Ingredient: models.Ingredient{ID: 4, Name: "Butter"}},
-		},
-		CreatedAt: time.Now(),
-	}
-	r.recipes[3] = &models.Recipe{
-		ID:           3,
-		Name:         "Tomato Chicken",
-		Description:  "Chicken with tomato and garlic",
-		Instructions: "Brown chicken, add onion and garlic, add tomato. Simmer 20 min.",
-		PrepTimeMin:  10,
-		CookTimeMin:  25,
-		Ingredients: []models.RecipeIngredient{
-			{RecipeID: 3, IngredientID: 7, Quantity: "500g", Ingredient: models.Ingredient{ID: 7, Name: "Chicken"}},
-			{RecipeID: 3, IngredientID: 8, Quantity: "2", Ingredient: models.Ingredient{ID: 8, Name: "Tomato"}},
-			{RecipeID: 3, IngredientID: 9, Quantity: "1", Ingredient: models.Ingredient{ID: 9, Name: "Onion"}},
-			{RecipeID: 3, IngredientID: 10, Quantity: "2 cloves", Ingredient: models.Ingredient{ID: 10, Name: "Garlic"}},
-		},
-		CreatedAt: time.Now(),
-	}
-	r.nextRecipeID = 4
+	rec.Description = desc.String
+	rec.Instructions = instructions.String
+	rec.Ingredients, _ = r.loadIngredients(rec.ID)
+	return &rec, nil
 }
 
-// GetByID returns a recipe by ID (thread-safe)
+func (r *RecipeRepository) loadIngredients(recipeID int) ([]models.RecipeIngredient, error) {
+	rows, err := r.db.Query(`SELECT ri.recipe_id, ri.ingredient_id, ri.quantity, i.name
+		FROM recipe_ingredients ri JOIN ingredients i ON i.id = ri.ingredient_id
+		WHERE ri.recipe_id = $1 ORDER BY ri.ingredient_id`, recipeID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []models.RecipeIngredient
+	for rows.Next() {
+		var ri models.RecipeIngredient
+		var name string
+		if err := rows.Scan(&ri.RecipeID, &ri.IngredientID, &ri.Quantity, &name); err != nil {
+			continue
+		}
+		ri.Ingredient = models.Ingredient{ID: ri.IngredientID, Name: name}
+		list = append(list, ri)
+	}
+	return list, nil
+}
+
+// GetByID returns a recipe by ID with ingredients.
 func (r *RecipeRepository) GetByID(id int) (*models.Recipe, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	recipe, exists := r.recipes[id]
-	if !exists {
-		return nil, ErrRecipeNotFound
-	}
-	return recipe, nil
+	row := r.db.QueryRow(`SELECT id, name, description, instructions, prep_time_min, cook_time_min, created_at
+		FROM recipes WHERE id = $1`, id)
+	return r.scanRecipe(row)
 }
 
-// GetAll returns all recipes
+// GetAll returns all recipes with ingredients.
 func (r *RecipeRepository) GetAll() []*models.Recipe {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	list := make([]*models.Recipe, 0, len(r.recipes))
-	for _, recipe := range r.recipes {
-		list = append(list, recipe)
+	rows, err := r.db.Query(`SELECT id, name, description, instructions, prep_time_min, cook_time_min, created_at FROM recipes ORDER BY id`)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	var list []*models.Recipe
+	for rows.Next() {
+		var rec models.Recipe
+		var desc, instructions sql.NullString
+		if err := rows.Scan(&rec.ID, &rec.Name, &desc, &instructions, &rec.PrepTimeMin, &rec.CookTimeMin, &rec.CreatedAt); err != nil {
+			continue
+		}
+		rec.Description = desc.String
+		rec.Instructions = instructions.String
+		rec.Ingredients, _ = r.loadIngredients(rec.ID)
+		list = append(list, &rec)
 	}
 	return list
 }
 
-// Create creates a new recipe (thread-safe)
+// Create inserts a new recipe and its ingredients.
 func (r *RecipeRepository) Create(req *models.CreateRecipeRequest) *models.Recipe {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	var id int
+	var createdAt time.Time
+	err := r.db.QueryRow(`INSERT INTO recipes (name, description, instructions, prep_time_min, cook_time_min)
+		VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at`,
+		req.Name, req.Description, req.Instructions, req.PrepTimeMin, req.CookTimeMin).Scan(&id, &createdAt)
+	if err != nil {
+		return nil
+	}
 
-	recipe := &models.Recipe{
-		ID:           r.nextRecipeID,
-		Name:         req.Name,
-		Description:  req.Description,
-		Instructions: req.Instructions,
-		PrepTimeMin:  req.PrepTimeMin,
-		CookTimeMin:  req.CookTimeMin,
-		Ingredients:  req.Ingredients,
-		CreatedAt:    time.Now(),
+	for _, ri := range req.Ingredients {
+		r.db.Exec(`INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity) VALUES ($1, $2, $3)`,
+			id, ri.IngredientID, ri.Quantity)
 	}
-	for i := range recipe.Ingredients {
-		recipe.Ingredients[i].RecipeID = recipe.ID
-		if ing, ok := r.ingredients[recipe.Ingredients[i].IngredientID]; ok {
-			recipe.Ingredients[i].Ingredient = *ing
-		}
-	}
-	r.recipes[recipe.ID] = recipe
-	r.nextRecipeID++
-	return recipe
+
+	created, _ := r.GetByID(id)
+	return created
 }
 
-// Update updates an existing recipe
+// Update updates recipe and replaces its ingredients.
 func (r *RecipeRepository) Update(id int, req *models.UpdateRecipeRequest) (*models.Recipe, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	recipe, exists := r.recipes[id]
-	if !exists {
+	res, err := r.db.Exec(`UPDATE recipes SET name = $1, description = $2, instructions = $3, prep_time_min = $4, cook_time_min = $5 WHERE id = $6`,
+		req.Name, req.Description, req.Instructions, req.PrepTimeMin, req.CookTimeMin, id)
+	if err != nil {
+		return nil, err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
 		return nil, ErrRecipeNotFound
 	}
-	recipe.Name = req.Name
-	recipe.Description = req.Description
-	recipe.Instructions = req.Instructions
-	recipe.PrepTimeMin = req.PrepTimeMin
-	recipe.CookTimeMin = req.CookTimeMin
-	recipe.Ingredients = req.Ingredients
-	for i := range recipe.Ingredients {
-		recipe.Ingredients[i].RecipeID = id
-		if ing, ok := r.ingredients[recipe.Ingredients[i].IngredientID]; ok {
-			recipe.Ingredients[i].Ingredient = *ing
-		}
+
+	if _, err := r.db.Exec("DELETE FROM recipe_ingredients WHERE recipe_id = $1", id); err != nil {
+		return nil, err
 	}
-	return recipe, nil
+	for _, ri := range req.Ingredients {
+		r.db.Exec(`INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity) VALUES ($1, $2, $3)`,
+			id, ri.IngredientID, ri.Quantity)
+	}
+	return r.GetByID(id)
 }
 
-// Delete removes a recipe
+// Delete removes a recipe (cascade deletes recipe_ingredients).
 func (r *RecipeRepository) Delete(id int) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if _, exists := r.recipes[id]; !exists {
+	res, err := r.db.Exec("DELETE FROM recipes WHERE id = $1", id)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
 		return ErrRecipeNotFound
 	}
-	delete(r.recipes, id)
 	return nil
 }
 
-// SearchByName returns recipes whose name contains the query (case-insensitive)
+// SearchByName returns recipes whose name or description contains the query (case-insensitive).
 func (r *RecipeRepository) SearchByName(query string) []*models.Recipe {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
 	query = strings.TrimSpace(strings.ToLower(query))
 	if query == "" {
-		return r.getAllLocked()
+		return r.GetAll()
 	}
+	pattern := "%" + query + "%"
+	rows, err := r.db.Query(`SELECT id, name, description, instructions, prep_time_min, cook_time_min, created_at
+		FROM recipes WHERE LOWER(name) LIKE $1 OR LOWER(COALESCE(description,'')) LIKE $2 ORDER BY id`, pattern, pattern)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
 
-	var result []*models.Recipe
-	for _, recipe := range r.recipes {
-		if strings.Contains(strings.ToLower(recipe.Name), query) ||
-			strings.Contains(strings.ToLower(recipe.Description), query) {
-			result = append(result, recipe)
+	var list []*models.Recipe
+	for rows.Next() {
+		var rec models.Recipe
+		var desc, instructions sql.NullString
+		if err := rows.Scan(&rec.ID, &rec.Name, &desc, &instructions, &rec.PrepTimeMin, &rec.CookTimeMin, &rec.CreatedAt); err != nil {
+			continue
 		}
+		rec.Description = desc.String
+		rec.Instructions = instructions.String
+		rec.Ingredients, _ = r.loadIngredients(rec.ID)
+		list = append(list, &rec)
 	}
-	return result
+	return list
 }
 
-// SearchByIngredients returns recipes that contain ALL of the given ingredient names (or any if empty)
+// SearchByIngredients returns recipes that contain ALL of the given ingredient names.
 func (r *RecipeRepository) SearchByIngredients(ingredientNames []string) []*models.Recipe {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
 	if len(ingredientNames) == 0 {
-		return r.getAllLocked()
+		return r.GetAll()
 	}
-
-	// Normalize: lowercase, trim
 	want := make(map[string]bool)
 	for _, n := range ingredientNames {
 		n = strings.TrimSpace(strings.ToLower(n))
@@ -216,44 +190,65 @@ func (r *RecipeRepository) SearchByIngredients(ingredientNames []string) []*mode
 		}
 	}
 	if len(want) == 0 {
-		return r.getAllLocked()
+		return r.GetAll()
 	}
 
-	var result []*models.Recipe
-	for _, recipe := range r.recipes {
-		have := make(map[string]bool)
-		for _, ri := range recipe.Ingredients {
-			have[strings.ToLower(ri.Ingredient.Name)] = true
-		}
-		allMatch := true
-		for w := range want {
-			if !have[w] {
-				allMatch = false
-				break
-			}
-		}
-		if allMatch {
-			result = append(result, recipe)
-		}
+	// Recipe IDs that have ALL of the wanted ingredients (HAVING COUNT = len(want)).
+	args := make([]interface{}, 0, len(want)+1)
+	inParts := make([]string, 0, len(want))
+	pos := 1
+	for name := range want {
+		args = append(args, name)
+		inParts = append(inParts, "$"+strconv.Itoa(pos))
+		pos++
 	}
-	return result
-}
+	args = append(args, len(want))
+	inPart := "LOWER(i.name) IN (" + strings.Join(inParts, ",") + ")"
+	q := `SELECT ri.recipe_id FROM recipe_ingredients ri JOIN ingredients i ON i.id = ri.ingredient_id WHERE ` + inPart + ` GROUP BY ri.recipe_id HAVING COUNT(DISTINCT LOWER(i.name)) = $` + strconv.Itoa(pos)
+	rows, err := r.db.Query(q, args...)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
 
-func (r *RecipeRepository) getAllLocked() []*models.Recipe {
-	list := make([]*models.Recipe, 0, len(r.recipes))
-	for _, recipe := range r.recipes {
-		list = append(list, recipe)
+	var ids []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			continue
+		}
+		ids = append(ids, id)
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+
+	// Load full recipes
+	var list []*models.Recipe
+	for _, id := range ids {
+		rec, _ := r.GetByID(id)
+		if rec != nil {
+			list = append(list, rec)
+		}
 	}
 	return list
 }
 
-// ListIngredients returns all ingredients (for dropdowns etc.)
+// ListIngredients returns all ingredients.
 func (r *RecipeRepository) ListIngredients() []*models.Ingredient {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	list := make([]*models.Ingredient, 0, len(r.ingredients))
-	for _, ing := range r.ingredients {
-		list = append(list, ing)
+	rows, err := r.db.Query("SELECT id, name FROM ingredients ORDER BY id")
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	var list []*models.Ingredient
+	for rows.Next() {
+		var ing models.Ingredient
+		if err := rows.Scan(&ing.ID, &ing.Name); err != nil {
+			continue
+		}
+		list = append(list, &ing)
 	}
 	return list
 }

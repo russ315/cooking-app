@@ -38,7 +38,21 @@ cooking-app/
 ### Prerequisites
 
 - Go 1.21 or higher
-- PostgreSQL (or your preferred database)
+- PostgreSQL
+
+### PostgreSQL Setup
+
+1. Install PostgreSQL and create a database:
+   ```bash
+   createdb cooking
+   ```
+2. Optional: set connection URL via environment variable:
+   ```bash
+   export DATABASE_URL="postgres://user:password@localhost:5432/cooking?sslmode=disable"
+   ```
+   Default (if unset): `postgres://postgres:postgres@localhost:5432/cooking?sslmode=disable`
+
+3. On first run, the app creates tables and seeds sample data (ingredients, recipes, one user).
 
 ### Installation
 

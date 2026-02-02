@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
+	"cooking-app/internal/db"
 	"cooking-app/internal/handler"
 	"cooking-app/internal/logger"
 	"cooking-app/internal/recipe"
@@ -21,8 +23,21 @@ func main() {
 	fmt.Println("===========================================")
 	fmt.Println()
 
-	userRepo := repository.NewUserRepository()
-	recipeRepo := repository.NewRecipeRepository()
+	connURL := os.Getenv("DATABASE_URL")
+	if connURL == "" {
+		connURL = "postgres://postgres:postgres@localhost:5432/cooking?sslmode=disable"
+	}
+	database, err := db.Open(connURL)
+	if err != nil {
+		log.Fatal("Database connection failed:", err)
+	}
+	defer database.Close()
+	if err := db.Migrate(database); err != nil {
+		log.Fatal("Database migrate failed:", err)
+	}
+
+	userRepo := repository.NewUserRepository(database)
+	recipeRepo := repository.NewRecipeRepository(database)
 	activityLogger := logger.NewActivityLogger()
 	searchService := recipe.NewSearchService(recipeRepo)
 
