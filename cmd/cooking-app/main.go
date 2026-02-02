@@ -1,3 +1,4 @@
+// Alternative entry: use root main.go and run "go run ." from project root.
 package main
 
 import (
@@ -28,6 +29,41 @@ func main() {
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo, jwtManager)
+
+	"cooking-app/internal/db"
+	"cooking-app/internal/handler"
+	"cooking-app/internal/logger"
+	"cooking-app/internal/recipe"
+	"cooking-app/internal/repository"
+
+	"github.com/gorilla/mux"
+
+	fmt.Println("===========================================")
+	fmt.Println("Cooking App - Assignment 4 Milestone 2")
+	fmt.Println("(Run from root: go run .)")
+	fmt.Println("===========================================")
+	fmt.Println()
+
+	connURL := os.Getenv("DATABASE_URL")
+	if connURL == "" {
+		connURL = "postgres://postgres:postgres@localhost:5432/cooking?sslmode=disable"
+	}
+	database, err := db.Open(connURL)
+	if err != nil {
+		log.Fatal("Database connection failed:", err)
+	}
+	defer database.Close()
+	if err := db.Migrate(database); err != nil {
+		log.Fatal("Database migrate failed:", err)
+	}
+
+	userRepo := repository.NewUserRepository(database)
+	recipeRepo := repository.NewRecipeRepository(database)
+	activityLogger := logger.NewActivityLogger()
+	searchService := recipe.NewSearchService(recipeRepo)
+
+	userHandler := handler.NewUserHandler(userRepo, activityLogger)
+	recipeHandler := handler.NewRecipeHandler(recipeRepo, searchService, activityLogger)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)

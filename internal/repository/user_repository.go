@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"database/sql"
 	"errors"
 	"strings"
 	"sync"
@@ -124,9 +125,17 @@ func (r *InMemoryUserRepository) FindAll() ([]*models.User, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	users := make([]*models.User, 0, len(r.users))
-	for _, user := range r.users {
-		users = append(users, user)
+	var users []*models.User
+	for rows.Next() {
+		var u models.User
+		var firstName, lastName, bio sql.NullString
+		if err := rows.Scan(&u.ID, &u.Username, &u.Email, &firstName, &lastName, &bio, &u.CreatedAt); err != nil {
+			continue
+		}
+		u.FirstName = firstName.String
+		u.LastName = lastName.String
+		u.Bio = bio.String
+		users = append(users, &u)
 	}
 
 	return users, nil

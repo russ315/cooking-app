@@ -2,24 +2,127 @@ openapi: 3.0.0
 info:
   title: Cooking App API
   version: 1.0.0
-  description: API documentation for the Cooking App recipe recommendation system
+  description: API documentation for Assignment 4 Milestone 2 (Recipe Search + User Profile)
 servers:
-  - url: http://localhost:8080/api/v1
+  - url: http://localhost:8080
     description: Local development server
 paths:
   /health:
     get:
-      summary: Health check endpoint
+      summary: Health check
       responses:
         '200':
-          description: Server is healthy
-          content:
-            text/plain:
-              example: OK
-  # TODO: Add more endpoints
-  # /auth/register
-  # /auth/login
-  # /recipes/search
-  # /inventory
-  # etc.
-  # must be implemented in this week
+          description: OK
+  /api/recipes:
+    get:
+      summary: List or search recipes
+      parameters:
+        - name: search
+          in: query
+          description: Search by name/description (substring)
+          schema:
+            type: string
+        - name: ingredients
+          in: query
+          description: Comma-separated ingredient names (recipes containing ALL)
+          schema:
+            type: string
+            example: egg,flour
+      responses:
+        '200':
+          description: List of recipes (JSON)
+    post:
+      summary: Create recipe
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                description: { type: string }
+                instructions: { type: string }
+                prep_time_min: { type: integer }
+                cook_time_min: { type: integer }
+                ingredients:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      ingredient_id: { type: integer }
+                      quantity: { type: string }
+      responses:
+        '201':
+          description: Created recipe (JSON)
+        '400':
+          description: Invalid body
+  /api/recipes/{id}:
+    get:
+      summary: Get recipe by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Recipe (JSON)
+        '404':
+          description: Not found
+    put:
+      summary: Update recipe
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                description: { type: string }
+                instructions: { type: string }
+                ingredients: { type: array }
+      responses:
+        '200':
+          description: Updated recipe (JSON)
+        '404':
+          description: Not found
+    delete:
+      summary: Delete recipe
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: No content
+        '404':
+          description: Not found
+  /api/ingredients:
+    get:
+      summary: List all ingredients
+      responses:
+        '200':
+          description: List of ingredients (JSON)
+  /api/profiles:
+    get:
+      summary: Get all user profiles
+      responses:
+        '200':
+          description: List of users (JSON)
+  /api/profile/{id}:
+    get:
+      summary: Get profile by ID
+    put:
+      summary: Update profile
+    delete:
+      summary: Delete profile
+  /api/profile:
+    post:
+      summary: Create user profile
