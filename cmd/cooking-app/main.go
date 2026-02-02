@@ -8,13 +8,6 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-
-	"recipe-backend/config"
-	"recipe-backend/internal/handlers"
-	"recipe-backend/internal/middleware"
-	"recipe-backend/internal/repository"
-	"recipe-backend/internal/service"
-	"recipe-backend/pkg/jwt"
 )
 
 func main() {
@@ -29,14 +22,6 @@ func main() {
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo, jwtManager)
-
-	"cooking-app/internal/db"
-	"cooking-app/internal/handler"
-	"cooking-app/internal/logger"
-	"cooking-app/internal/recipe"
-	"cooking-app/internal/repository"
-
-	"github.com/gorilla/mux"
 
 	fmt.Println("===========================================")
 	fmt.Println("Cooking App - Assignment 4 Milestone 2")
