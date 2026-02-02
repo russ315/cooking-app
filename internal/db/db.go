@@ -34,8 +34,9 @@ func createTables(db *sql.DB) error {
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS users (
 			id SERIAL PRIMARY KEY,
-			username TEXT NOT NULL,
-			email TEXT NOT NULL,
+			username TEXT NOT NULL UNIQUE,
+			email TEXT NOT NULL UNIQUE,
+			password TEXT NOT NULL DEFAULT '',
 			first_name TEXT,
 			last_name TEXT,
 			bio TEXT,
@@ -66,7 +67,86 @@ func createTables(db *sql.DB) error {
 			return fmt.Errorf("create table: %w", err)
 		}
 	}
+
+	// Add password column if it doesn't exist (for existing databases)
+	if err := addPasswordColumnIfMissing(db); err != nil {
+		return err
+	}
+
+	// Add unique constraints if missing
+	if err := addUniqueConstraintsIfMissing(db); err != nil {
+		return err
+	}
+
+	// Create indexes for better performance
+	indexes := []string{
+		`CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)`,
+		`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`,
+		`CREATE INDEX IF NOT EXISTS idx_recipes_name ON recipes(name)`,
+	}
+	for _, idx := range indexes {
+		if _, err := db.Exec(idx); err != nil {
+			log.Printf("Warning: could not create index: %v", err)
+		}
+	}
+
 	log.Println("✓ Database tables created/verified")
+	return nil
+}
+
+// addPasswordColumnIfMissing adds password column to existing users table
+func addPasswordColumnIfMissing(db *sql.DB) error {
+	var exists bool
+	err := db.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns 
+			WHERE table_name = 'users' AND column_name = 'password'
+		)
+	`).Scan(&exists)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		if _, err := db.Exec(`ALTER TABLE users ADD COLUMN password TEXT NOT NULL DEFAULT ''`); err != nil {
+			return fmt.Errorf("add password column: %w", err)
+		}
+		log.Println("✓ Password column added to users table")
+	}
+
+	return nil
+}
+
+// addUniqueConstraintsIfMissing adds unique constraints to username and email
+func addUniqueConstraintsIfMissing(db *sql.DB) error {
+	// Check and add unique constraint on username
+	var usernameUnique bool
+	err := db.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1 FROM pg_constraint 
+			WHERE conname = 'users_username_key'
+		)
+	`).Scan(&usernameUnique)
+	if err == nil && !usernameUnique {
+		if _, err := db.Exec(`ALTER TABLE users ADD CONSTRAINT users_username_key UNIQUE (username)`); err != nil {
+			log.Printf("Warning: could not add unique constraint on username: %v", err)
+		}
+	}
+
+	// Check and add unique constraint on email
+	var emailUnique bool
+	err = db.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1 FROM pg_constraint 
+			WHERE conname = 'users_email_key'
+		)
+	`).Scan(&emailUnique)
+	if err == nil && !emailUnique {
+		if _, err := db.Exec(`ALTER TABLE users ADD CONSTRAINT users_email_key UNIQUE (email)`); err != nil {
+			log.Printf("Warning: could not add unique constraint on email: %v", err)
+		}
+	}
+
 	return nil
 }
 
@@ -87,14 +167,17 @@ func seedIfEmpty(db *sql.DB) error {
 	}
 	log.Println("✓ Ingredients seeded")
 
-	// Seed one user if no users exist
+	// Seed one user if no users exist (with hashed password)
+	// Password: "test123456" - bcrypt hash
 	var userCount int
 	if err := db.QueryRow("SELECT COUNT(*) FROM users").Scan(&userCount); err == nil && userCount == 0 {
-		if _, err := db.Exec(`INSERT INTO users (username, email, first_name, last_name, bio, created_at)
-			VALUES ('john_doe', 'john@example.com', 'John', 'Doe', 'Test user', NOW())`); err != nil {
+		// This is bcrypt hash for "test123456"
+		hashedPassword := "$2a$10$rQCd7e8K3k8K3k8K3k8K3eO.dZvZvZvZvZvZvZvZvZvZvZvZvZvZu"
+		if _, err := db.Exec(`INSERT INTO users (username, email, password, first_name, last_name, bio, created_at)
+			VALUES ('john_doe', 'john@example.com', $1, 'John', 'Doe', 'Test user', NOW())`, hashedPassword); err != nil {
 			log.Println("Seed user:", err)
 		} else {
-			log.Println("✓ Sample user seeded")
+			log.Println("✓ Sample user seeded (username: john_doe, password: test123456)")
 		}
 	}
 
