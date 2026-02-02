@@ -8,9 +8,11 @@ import (
 	"net/http"
 	"os"
 
+	"cooking-app/internal/auth"
 	"cooking-app/internal/db"
 	"cooking-app/internal/handler"
 	"cooking-app/internal/logger"
+	"cooking-app/internal/middleware"
 	"cooking-app/internal/recipe"
 	"cooking-app/internal/repository"
 
@@ -19,11 +21,12 @@ import (
 
 func main() {
 	fmt.Println("===========================================")
-	fmt.Println("Cooking App - Assignment 4 Milestone 2")
-	fmt.Println("Recipe Search Logic + User Profile API (PostgreSQL)")
+	fmt.Println("Cooking App - With Authentication")
+	fmt.Println("Recipe Search + User Profiles + Auth (JWT)")
 	fmt.Println("===========================================")
 	fmt.Println()
 
+	// Database connection
 	connURL := os.Getenv("DATABASE_URL")
 	if connURL == "" {
 		connURL = "postgres://postgres:postgres@localhost:5432/cooking?sslmode=disable"
@@ -40,58 +43,92 @@ func main() {
 		log.Fatal("Database connection failed:", err)
 	}
 	defer database.Close()
+
+	// Run migrations
 	if err := db.Migrate(database); err != nil {
 		log.Fatal("Database migrate failed:", err)
+	}
+
+	// Initialize services
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "default-secret-change-in-production"
+		fmt.Println("⚠ Using default JWT_SECRET (set JWT_SECRET env var in production)")
 	}
 
 	userRepo := repository.NewUserRepository(database)
 	recipeRepo := repository.NewRecipeRepository(database)
 	activityLogger := logger.NewActivityLogger()
 	searchService := recipe.NewSearchService(recipeRepo)
+	authService := auth.NewService(jwtSecret)
 
+	// Initialize handlers
+	authHandler := handler.NewAuthHandler(userRepo, authService)
 	userHandler := handler.NewUserHandler(userRepo, activityLogger)
 	recipeHandler := handler.NewRecipeHandler(recipeRepo, searchService, activityLogger)
 
+	// Initialize middleware
+	authMiddleware := middleware.NewAuthMiddleware(authService)
+
+	// Setup router
 	router := mux.NewRouter()
 
-	// Health
+	// Health check
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	}).Methods("GET")
 
-	// User profile API
-	router.HandleFunc("/api/profile/{id:[0-9]+}", userHandler.GetProfile).Methods("GET")
-	router.HandleFunc("/api/profile/{id:[0-9]+}", userHandler.UpdateProfile).Methods("PUT")
-	router.HandleFunc("/api/profile/{id:[0-9]+}", userHandler.DeleteProfile).Methods("DELETE")
-	router.HandleFunc("/api/profiles", userHandler.GetAllProfiles).Methods("GET")
-	router.HandleFunc("/api/profile", userHandler.CreateProfile).Methods("POST")
+	// Public auth routes
+	router.HandleFunc("/api/auth/register", authHandler.Register).Methods("POST")
+	router.HandleFunc("/api/auth/login", authHandler.Login).Methods("POST")
 
-	// Recipe Search API (Assignment 4 - Recipe Search Logic)
+	// Public profile routes (can view profiles without auth)
+	router.HandleFunc("/api/profiles", userHandler.GetAllProfiles).Methods("GET")
+	router.HandleFunc("/api/profile/{id:[0-9]+}", userHandler.GetProfile).Methods("GET")
+
+	// Protected profile routes (require authentication)
+	protectedProfile := router.PathPrefix("/api/profile").Subrouter()
+	protectedProfile.Use(authMiddleware.Authenticate)
+	protectedProfile.HandleFunc("", userHandler.CreateProfile).Methods("POST")
+	protectedProfile.HandleFunc("/{id:[0-9]+}", userHandler.UpdateProfile).Methods("PUT")
+	protectedProfile.HandleFunc("/{id:[0-9]+}", userHandler.DeleteProfile).Methods("DELETE")
+
+	// Recipe routes (public read, protected write)
 	router.HandleFunc("/api/recipes", recipeHandler.ListRecipes).Methods("GET")
-	router.HandleFunc("/api/recipes", recipeHandler.CreateRecipe).Methods("POST")
 	router.HandleFunc("/api/recipes/{id:[0-9]+}", recipeHandler.GetRecipe).Methods("GET")
-	router.HandleFunc("/api/recipes/{id:[0-9]+}", recipeHandler.UpdateRecipe).Methods("PUT")
-	router.HandleFunc("/api/recipes/{id:[0-9]+}", recipeHandler.DeleteRecipe).Methods("DELETE")
 	router.HandleFunc("/api/ingredients", recipeHandler.ListIngredients).Methods("GET")
 
-	fmt.Println(" Endpoints:")
-	fmt.Println("  GET    /health                 - Health check")
-	fmt.Println("  GET    /api/profiles           - Get all user profiles")
-	fmt.Println("  GET    /api/profile/{id}       - Get profile by ID")
-	fmt.Println("  POST   /api/profile            - Create profile")
-	fmt.Println("  PUT    /api/profile/{id}       - Update profile")
-	fmt.Println("  DELETE /api/profile/{id}       - Delete profile")
-	fmt.Println("  GET    /api/recipes            - List recipes (optional ?search=... or ?ingredients=egg,flour)")
-	fmt.Println("  GET    /api/recipes/{id}       - Get recipe by ID")
-	fmt.Println("  POST   /api/recipes           - Create recipe")
-	fmt.Println("  PUT    /api/recipes/{id}      - Update recipe")
-	fmt.Println("  DELETE /api/recipes/{id}      - Delete recipe")
-	fmt.Println("  GET    /api/ingredients       - List ingredients")
+	// Protected recipe routes
+	protectedRecipes := router.PathPrefix("/api/recipes").Subrouter()
+	protectedRecipes.Use(authMiddleware.Authenticate)
+	protectedRecipes.HandleFunc("", recipeHandler.CreateRecipe).Methods("POST")
+	protectedRecipes.HandleFunc("/{id:[0-9]+}", recipeHandler.UpdateRecipe).Methods("PUT")
+	protectedRecipes.HandleFunc("/{id:[0-9]+}", recipeHandler.DeleteRecipe).Methods("DELETE")
+
+	fmt.Println("📋 API Endpoints:")
+	fmt.Println()
+	fmt.Println("  PUBLIC:")
+	fmt.Println("    GET    /health                      - Health check")
+	fmt.Println("    POST   /api/auth/register           - Register new user")
+	fmt.Println("    POST   /api/auth/login              - Login user")
+	fmt.Println("    GET    /api/profiles                - Get all profiles")
+	fmt.Println("    GET    /api/profile/{id}            - Get profile by ID")
+	fmt.Println("    GET    /api/recipes                 - List recipes (search: ?search=... or ?ingredients=...)")
+	fmt.Println("    GET    /api/recipes/{id}            - Get recipe by ID")
+	fmt.Println("    GET    /api/ingredients             - List ingredients")
+	fmt.Println()
+	fmt.Println("  PROTECTED (require Authorization: Bearer <token>):")
+	fmt.Println("    POST   /api/profile                 - Create profile")
+	fmt.Println("    PUT    /api/profile/{id}            - Update profile")
+	fmt.Println("    DELETE /api/profile/{id}            - Delete profile")
+	fmt.Println("    POST   /api/recipes                 - Create recipe")
+	fmt.Println("    PUT    /api/recipes/{id}            - Update recipe")
+	fmt.Println("    DELETE /api/recipes/{id}            - Delete recipe")
 	fmt.Println()
 
 	port := "8080"
-	fmt.Printf(" Server starting on http://localhost:%s\n", port)
+	fmt.Printf("🚀 Server starting on http://localhost:%s\n", port)
 	fmt.Println()
 
 	if err := http.ListenAndServe(":"+port, router); err != nil {
