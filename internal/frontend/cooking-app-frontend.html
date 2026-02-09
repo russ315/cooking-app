@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cooking App - Share & Discover Recipes</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cream: #FFF8F0;
+            --sage: #9CAF88;
+            --forest: #2F5233;
+            --terracotta: #D4745E;
+            --charcoal: #2D2D2A;
+            --gold: #C9A961;
+            --shadow: rgba(0, 0, 0, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+            background: var(--cream);
+            color: var(--charcoal);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .app {
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Decorative background */
+        .bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            opacity: 0.03;
+            background-image:
+                    radial-gradient(circle at 20% 50%, var(--sage) 1px, transparent 1px),
+                    radial-gradient(circle at 80% 80%, var(--terracotta) 1px, transparent 1px);
+            background-size: 50px 50px, 70px 70px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Header */
+        .header {
+            position: sticky;
+            top: 0;
+            background: rgba(255, 248, 240, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(47, 82, 51, 0.1);
+            padding: 1.5rem 2rem;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: slideDown 0.6s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--forest);
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--sage), var(--forest));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .nav {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 12px;
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--sage), var(--forest));
+            color: white;
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(47, 82, 51, 0.2);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--forest);
+            border: 1.5px solid var(--sage);
+        }
+
+        .btn-secondary:hover {
+            background: var(--sage);
+            color: white;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--charcoal);
+            padding: 0.5rem 1rem;
+        }
+
+        .btn-ghost:hover {
+            background: rgba(156, 175, 136, 0.1);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 4rem 0;
+            animation: fadeIn 0.8s ease-out 0.2s both;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 4.5rem;
+            font-weight: 900;
+            color: var(--forest);
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            letter-spacing: -1px;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--charcoal);
+            opacity: 0.8;
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+
+        /* Grid */
+        .recipes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 2rem;
+            animation: fadeIn 0.8s ease-out 0.4s both;
+        }
+
+        /* Recipe Card */
+        .recipe-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px var(--shadow);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .recipe-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--sage), var(--terracotta));
+            transform: scaleX(0);
+            transition: transform 0.4s ease;
+        }
+
+        .recipe-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .recipe-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        .recipe-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, var(--sage), var(--forest));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .recipe-image::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2), transparent);
+        }
+
+        .recipe-content {
+            padding: 1.5rem;
+        }
+
+        .recipe-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--forest);
+            margin-bottom: 0.5rem;
+        }
+
+        .recipe-description {
+            color: var(--charcoal);
+            opacity: 0.7;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .recipe-meta {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.875rem;
+            color: var(--charcoal);
+            opacity: 0.6;
+            margin-bottom: 1rem;
+        }
+
+        .recipe-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease-out;
+            padding: 2rem;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 24px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal-header {
+            padding: 2rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--forest);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            color: var(--charcoal);
+            cursor: pointer;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            opacity: 1;
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--forest);
+        }
+
+        .form-input,
+        .form-textarea {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid rgba(156, 175, 136, 0.2);
+            border-radius: 12px;
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-input:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--sage);
+            box-shadow: 0 0 0 3px rgba(156, 175, 136, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .error {
+            background: #FEE;
+            border: 1px solid #FCC;
+            color: #C33;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            font-size: 1.125rem;
+            color: var(--charcoal);
+            opacity: 0.6;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(156, 175, 136, 0.2);
+            border-top-color: var(--sage);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        .empty-state h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            color: var(--forest);
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state p {
+            color: var(--charcoal);
+            opacity: 0.6;
+            margin-bottom: 2rem;
+        }
+
+        /* Recipe Detail */
+        .recipe-detail-header {
+            background: linear-gradient(135deg, var(--sage), var(--forest));
+            padding: 3rem 2rem;
+            color: white;
+            border-radius: 24px 24px 0 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .recipe-detail-header::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.15), transparent);
+        }
+
+        .recipe-detail-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            font-weight: 900;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .recipe-detail-body {
+            padding: 2rem;
+        }
+
+        .recipe-detail-section {
+            margin-bottom: 2rem;
+        }
+
+        .recipe-detail-section h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            color: var(--forest);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .recipe-instructions {
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .recipes-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .nav {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // API Configuration
+    const API_BASE_URL = 'http://localhost:8080/api';
+
+    // API Service
+    const api = {
+        async request(endpoint, options = {}) {
+            const token = localStorage.getItem('token');
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                ...options.headers,
+            };
+
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                ...options,
+                headers,
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(error || 'Request failed');
+            }
+
+            return response.json();
+        },
+
+        // Auth
+        register: (data) => api.request('/auth/register', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        }),
+
+        login: (data) => api.request('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        }),
+
+        // Recipes
+        getRecipes: () => api.request('/recipes'),
+        getRecipe: (id) => api.request(`/recipes/${id}`),
+        createRecipe: (data) => api.request('/recipes', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        }),
+        searchRecipes: (query) => api.request(`/recipes?search=${encodeURIComponent(query)}`),
+    };
+
+    // Components
+    function Modal({ isOpen, onClose, title, children }) {
+        if (!isOpen) return null;
+
+        return (
+            <div className="modal-overlay" onClick={onClose}>
+                <div className="modal" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-header">
+                        <h2 className="modal-title">{title}</h2>
+                        <button className="close-btn" onClick={onClose}>×</button>
+                    </div>
+                    <div className="modal-body">
+                        {children}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    function LoginForm({ onSuccess, onSwitch }) {
+        const [formData, setFormData] = useState({ username: '', password: '' });
+        const [error, setError] = useState('');
+        const [loading, setLoading] = useState(false);
+
+        const handleSubmit = async (e) => {
+            e.preventDefault();
+            setError('');
+            setLoading(true);
+
+            try {
+                const result = await api.login(formData);
+                localStorage.setItem('token', result.token);
+                localStorage.setItem('user', JSON.stringify(result.user));
+                onSuccess(result.user);
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        return (
+            <form onSubmit={handleSubmit}>
+                {error && <div className="error">{error}</div>}
+
+                <div className="form-group">
+                    <label className="form-label">Username or Email</label>
+                    <label>
+                        <input
+                            type="text"
+                            className="form-input"
+                            value={formData.username}
+                            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                            required
+                        />
+                    </label>
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">Password</label>
+                    <input
+                        type="password"
+                        className="form-input"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        required
+                    />
+                </div>
+
+                <button type="submit" className="btn btn-primary" style={{ width: '100%', marginBottom: '1rem' }} disabled={loading}>
+                    {loading ? 'Signing in...' : 'Sign In'}
+                </button>
+
+                <button type="button" className="btn btn-ghost" style={{ width: '100%' }} onClick={onSwitch}>
+                    Don't have an account? Register
+                </button>
+            </form>
+        );
+    }
+
+    function RegisterForm({ onSuccess, onSwitch }) {
+        const [formData, setFormData] = useState({
+            username: '',
+            email: '',
+            password: '',
+            first_name: '',
+            last_name: '',
+        });
+        const [error, setError] = useState('');
+        const [loading, setLoading] = useState(false);
+
+        const handleSubmit = async (e) => {
+            e.preventDefault();
+            setError('');
+            setLoading(true);
+
+            try {
+                const result = await api.register(formData);
+                localStorage.setItem('token', result.token);
+                localStorage.setItem('user', JSON.stringify(result.user));
+                onSuccess(result.user);
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        return (
+            <form onSubmit={handleSubmit}>
+                {error && <div className="error">{error}</div>}
+
+                <div className="form-group">
+                    <label className="form-label">Username</label>
+                    <input
+                        type="text"
+                        className="form-input"
+                        value={formData.username}
+                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                        required
+                    />
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">Email</label>
+                    <input
+                        type="email"
+                        className="form-input"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        required
+                    />
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">Password</label>
+                    <input
+                        type="password"
+                        className="form-input"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        required
+                        minLength="6"
+                    />
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">First Name (Optional)</label>
+                    <input
+                        type="text"
+                        className="form-input"
+                        value={formData.first_name}
+                        onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                    />
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">Last Name (Optional)</label>
+                    <input
+                        type="text"
+                        className="form-input"
+                        value={formData.last_name}
+                        onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                    />
+                </div>
+
+                <button type="submit" className="btn btn-primary" style={{ width: '100%', marginBottom: '1rem' }} disabled={loading}>
+                    {loading ? 'Creating account...' : 'Create Account'}
+                </button>
+
+                <button type="button" className="btn btn-ghost" style={{ width: '100%' }} onClick={onSwitch}>
+                    Already have an account? Sign in
+                </button>
+            </form>
+        );
+    }
+
+    function CreateRecipeForm({ onSuccess, onCancel }) {
+        const [formData, setFormData] = useState({
+            name: '',
+            description: '',
+            instructions: '',
+            prep_time_min: 0,
+            cook_time_min: 0,
+        });
+        const [error, setError] = useState('');
+        const [loading, setLoading] = useState(false);
+
+        const handleSubmit = async (e) => {
+            e.preventDefault();
+            setError('');
+            setLoading(true);
+
+            try {
+                await api.createRecipe(formData);
+                onSuccess();
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        return (
+            <form onSubmit={handleSubmit}>
+                {error && <div className="error">{error}</div>}
+
+                <div className="form-group">
+                    <label className="form-label">Recipe Name</label>
+                    <input
+                        type="text"
+                        className="form-input"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        required
+                    />
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">Description</label>
+                    <textarea
+                        className="form-textarea"
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    />
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">Instructions</label>
+                    <textarea
+                        className="form-textarea"
+                        value={formData.instructions}
+                        onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
+                        style={{ minHeight: '150px' }}
+                    />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="form-group">
+                        <label className="form-label">Prep Time (min)</label>
+                        <input
+                            type="number"
+                            className="form-input"
+                            value={formData.prep_time_min}
+                            onChange={(e) => setFormData({ ...formData, prep_time_min: parseInt(e.target.value) || 0 })}
+                            min="0"
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">Cook Time (min)</label>
+                        <input
+                            type="number"
+                            className="form-input"
+                            value={formData.cook_time_min}
+                            onChange={(e) => setFormData({ ...formData, cook_time_min: parseInt(e.target.value) || 0 })}
+                            min="0"
+                        />
+                    </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={loading}>
+                        {loading ? 'Creating...' : 'Create Recipe'}
+                    </button>
+                    <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={onCancel}>
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        );
+    }
+
+    function RecipeCard({ recipe, onClick }) {
+        const totalTime = recipe.prep_time_min + recipe.cook_time_min;
+
+        return (
+            <div className="recipe-card" onClick={onClick}>
+                <div className="recipe-image">
+                    🍳
+                </div>
+                <div className="recipe-content">
+                    <h3 className="recipe-title">{recipe.name}</h3>
+                    <p className="recipe-description">{recipe.description || 'A delicious recipe'}</p>
+                    <div className="recipe-meta">
+                        <span>⏱️ {totalTime} min</span>
+                        <span>👨‍🍳 Prep {recipe.prep_time_min}m</span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    function RecipeDetail({ recipe, onClose }) {
+        return (
+            <Modal isOpen={true} onClose={onClose} title="">
+                <div style={{ margin: '-2rem' }}>
+                    <div className="recipe-detail-header">
+                        <h2 className="recipe-detail-title">{recipe.name}</h2>
+                        <div className="recipe-meta" style={{ color: 'rgba(255,255,255,0.9)' }}>
+                            <span>⏱️ Total: {recipe.prep_time_min + recipe.cook_time_min} min</span>
+                            <span>📝 Prep: {recipe.prep_time_min} min</span>
+                            <span>🔥 Cook: {recipe.cook_time_min} min</span>
+                        </div>
+                    </div>
+
+                    <div className="recipe-detail-body">
+                        {recipe.description && (
+                            <div className="recipe-detail-section">
+                                <h3>📖 About</h3>
+                                <p>{recipe.description}</p>
+                            </div>
+                        )}
+
+                        {recipe.instructions && (
+                            <div className="recipe-detail-section">
+                                <h3>👨‍🍳 Instructions</h3>
+                                <div className="recipe-instructions">{recipe.instructions}</div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </Modal>
+        );
+    }
+
+    function App() {
+        const [user, setUser] = useState(null);
+        const [recipes, setRecipes] = useState([]);
+        const [loading, setLoading] = useState(true);
+        const [showAuthModal, setShowAuthModal] = useState(false);
+        const [authMode, setAuthMode] = useState('login');
+        const [showCreateRecipe, setShowCreateRecipe] = useState(false);
+        const [selectedRecipe, setSelectedRecipe] = useState(null);
+        const [searchQuery, setSearchQuery] = useState('');
+
+        useEffect(() => {
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+                setUser(JSON.parse(storedUser));
+            }
+            loadRecipes();
+        }, []);
+
+        const loadRecipes = async () => {
+            setLoading(true);
+            try {
+                const data = await api.getRecipes();
+                setRecipes(data || []);
+            } catch (err) {
+                console.error('Failed to load recipes:', err);
+                setRecipes([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        const handleAuthSuccess = (userData) => {
+            setUser(userData);
+            setShowAuthModal(false);
+            loadRecipes();
+        };
+
+        const handleLogout = () => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            setUser(null);
+        };
+
+        const handleCreateRecipe = async () => {
+            setShowCreateRecipe(false);
+            await loadRecipes();
+        };
+
+        const handleSearch = async (e) => {
+            e.preventDefault();
+            if (!searchQuery.trim()) {
+                loadRecipes();
+                return;
+            }
+
+            setLoading(true);
+            try {
+                const data = await api.searchRecipes(searchQuery);
+                setRecipes(data || []);
+            } catch (err) {
+                console.error('Search failed:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        return (
+            <div className="app">
+                <div className="bg-pattern"></div>
+
+                <header className="header">
+                    <div className="logo">
+                        <div className="logo-icon">🍳</div>
+                        CookBook
+                    </div>
+                    <nav className="nav">
+                        {user ? (
+                            <>
+                                <span className="btn-ghost">Hello, {user.username}!</span>
+                                <button className="btn btn-primary" onClick={() => setShowCreateRecipe(true)}>
+                                    + New Recipe
+                                </button>
+                                <button className="btn btn-secondary" onClick={handleLogout}>
+                                    Logout
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <button className="btn btn-secondary" onClick={() => { setAuthMode('login'); setShowAuthModal(true); }}>
+                                    Sign In
+                                </button>
+                                <button className="btn btn-primary" onClick={() => { setAuthMode('register'); setShowAuthModal(true); }}>
+                                    Get Started
+                                </button>
+                            </>
+                        )}
+                    </nav>
+                </header>
+
+                <div className="container">
+                    <div className="hero">
+                        <h1>Discover & Share<br/>Amazing Recipes</h1>
+                        <p>Join our community of home cooks and explore thousands of delicious recipes</p>
+
+                        <form onSubmit={handleSearch} style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', gap: '1rem' }}>
+                            <input
+                                type="text"
+                                className="form-input"
+                                placeholder="Search recipes..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                style={{ flex: 1 }}
+                            />
+                            <button type="submit" className="btn btn-primary">Search</button>
+                        </form>
+                    </div>
+
+                    {loading ? (
+                        <div className="loading">
+                            <div className="spinner"></div>
+                            <p>Loading recipes...</p>
+                        </div>
+                    ) : recipes.length === 0 ? (
+                        <div className="empty-state">
+                            <div className="empty-state-icon">🍽️</div>
+                            <h2>No recipes yet</h2>
+                            <p>Be the first to share a delicious recipe with the community!</p>
+                            {user && (
+                                <button className="btn btn-primary" onClick={() => setShowCreateRecipe(true)}>
+                                    Create First Recipe
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="recipes-grid">
+                            {recipes.map((recipe) => (
+                                <RecipeCard
+                                    key={recipe.id}
+                                    recipe={recipe}
+                                    onClick={() => setSelectedRecipe(recipe)}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Auth Modal */}
+                <Modal
+                    isOpen={showAuthModal}
+                    onClose={() => setShowAuthModal(false)}
+                    title={authMode === 'login' ? 'Welcome Back' : 'Create Account'}
+                >
+                    {authMode === 'login' ? (
+                        <LoginForm
+                            onSuccess={handleAuthSuccess}
+                            onSwitch={() => setAuthMode('register')}
+                        />
+                    ) : (
+                        <RegisterForm
+                            onSuccess={handleAuthSuccess}
+                            onSwitch={() => setAuthMode('login')}
+                        />
+                    )}
+                </Modal>
+
+                {/* Create Recipe Modal */}
+                <Modal
+                    isOpen={showCreateRecipe}
+                    onClose={() => setShowCreateRecipe(false)}
+                    title="Create New Recipe"
+                >
+                    <CreateRecipeForm
+                        onSuccess={handleCreateRecipe}
+                        onCancel={() => setShowCreateRecipe(false)}
+                    />
+                </Modal>
+
+                {/* Recipe Detail Modal */}
+                {selectedRecipe && (
+                    <RecipeDetail
+                        recipe={selectedRecipe}
+                        onClose={() => setSelectedRecipe(null)}
+                    />
+                )}
+            </div>
+        );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+</script>
+</body>
+</html>
