@@ -21,7 +21,7 @@ import (
 
 func main() {
 	fmt.Println("===========================================")
-	fmt.Println("Cooking App - With Authentication")
+	fmt.Println("Cooking App - With Authentication + CORS")
 	fmt.Println("Recipe Search + User Profiles + Auth (JWT)")
 	fmt.Println("===========================================")
 	fmt.Println()
@@ -69,9 +69,13 @@ func main() {
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(authService)
+	corsMiddleware := middleware.NewCORSMiddleware([]string{"*"}) // Allow all origins (change in production)
 
 	// Setup router
 	router := mux.NewRouter()
+
+	// Apply CORS middleware to all routes
+	router.Use(corsMiddleware.Handler)
 
 	// Health check
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -106,6 +110,16 @@ func main() {
 	protectedRecipes.HandleFunc("/{id:[0-9]+}", recipeHandler.UpdateRecipe).Methods("PUT")
 	protectedRecipes.HandleFunc("/{id:[0-9]+}", recipeHandler.DeleteRecipe).Methods("DELETE")
 
+	// Frontend: serve React single-page app for all non-API routes
+	frontendFS := http.FileServer(http.Dir("./internal/frontend"))
+	router.PathPrefix("/").Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Serve the main SPA HTML at the root path
+		if r.URL.Path == "/" {
+			r.URL.Path = "/cooking-app-frontend.html"
+		}
+		frontendFS.ServeHTTP(w, r)
+	}))
+
 	fmt.Println("📋 API Endpoints:")
 	fmt.Println()
 	fmt.Println("  PUBLIC:")
@@ -126,9 +140,12 @@ func main() {
 	fmt.Println("    PUT    /api/recipes/{id}            - Update recipe")
 	fmt.Println("    DELETE /api/recipes/{id}            - Delete recipe")
 	fmt.Println()
+	fmt.Println("  🌐 CORS enabled for all origins")
+	fmt.Println()
 
 	port := "8080"
 	fmt.Printf("🚀 Server starting on http://localhost:%s\n", port)
+	fmt.Println("   Frontend: Visit http://localhost:" + port + "/")
 	fmt.Println()
 
 	if err := http.ListenAndServe(":"+port, router); err != nil {
