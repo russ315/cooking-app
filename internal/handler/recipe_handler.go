@@ -15,16 +15,18 @@ import (
 )
 
 type RecipeHandler struct {
-	repo   *repository.RecipeRepository
-	search *recipe.SearchService
-	logger *logger.ActivityLogger
+	repo            *repository.RecipeRepository
+	search          *recipe.SearchService
+	enhancedSearch  *recipe.EnhancedSearchService
+	logger          *logger.ActivityLogger
 }
 
-func NewRecipeHandler(repo *repository.RecipeRepository, search *recipe.SearchService, log *logger.ActivityLogger) *RecipeHandler {
+func NewRecipeHandler(repo *repository.RecipeRepository, search *recipe.SearchService, enhancedSearch *recipe.EnhancedSearchService, log *logger.ActivityLogger) *RecipeHandler {
 	return &RecipeHandler{
-		repo:   repo,
-		search: search,
-		logger: log,
+		repo:           repo,
+		search:         search,
+		enhancedSearch: enhancedSearch,
+		logger:         log,
 	}
 }
 
@@ -146,4 +148,106 @@ func (h *RecipeHandler) ListIngredients(w http.ResponseWriter, r *http.Request) 
 	list := h.repo.ListIngredients()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(list)
+}
+
+// AdvancedIngredientSearch - POST /api/recipes/search/advanced
+func (h *RecipeHandler) AdvancedIngredientSearch(w http.ResponseWriter, r *http.Request) {
+	var req recipe.SearchRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Set default values
+	if req.MaxResults <= 0 {
+		req.MaxResults = 20
+	}
+
+	response := h.enhancedSearch.ComprehensiveSearch(req)
+	h.logger.Log("advanced_search", 0)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// GetIngredientSubstitutes - GET /api/ingredients/{name}/substitutes
+func (h *RecipeHandler) GetIngredientSubstitutes(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	ingredientName := vars["name"]
+	if ingredientName == "" {
+		http.Error(w, "Ingredient name is required", http.StatusBadRequest)
+		return
+	}
+
+	substitutes := h.enhancedSearch.GetIngredientSubstitutes(ingredientName)
+	h.logger.Log("ingredient_substitutes_viewed", 0)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string][]string{"substitutes": substitutes})
+}
+
+// GetIngredientSynonyms - GET /api/ingredients/{name}/synonyms
+func (h *RecipeHandler) GetIngredientSynonyms(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	ingredientName := vars["name"]
+	if ingredientName == "" {
+		http.Error(w, "Ingredient name is required", http.StatusBadRequest)
+		return
+	}
+
+	synonyms := h.enhancedSearch.GetIngredientSynonyms(ingredientName)
+	h.logger.Log("ingredient_synonyms_viewed", 0)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string][]string{"synonyms": synonyms})
+}
+
+// AddIngredientSynonym - POST /api/ingredients/synonyms
+func (h *RecipeHandler) AddIngredientSynonym(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Canonical string `json:"canonical"`
+		Synonym   string `json:"synonym"`
+	}
+	
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Canonical == "" || req.Synonym == "" {
+		http.Error(w, "Both canonical and synonym are required", http.StatusBadRequest)
+		return
+	}
+
+	h.enhancedSearch.AddIngredientSynonym(req.Canonical, req.Synonym)
+	h.logger.Log("ingredient_synonym_added", 0)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"status": "success", "message": "Synonym added successfully"})
+}
+
+// AddIngredientSubstitute - POST /api/ingredients/substitutes
+func (h *RecipeHandler) AddIngredientSubstitute(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Ingredient string `json:"ingredient"`
+		Substitute string `json:"substitute"`
+	}
+	
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Ingredient == "" || req.Substitute == "" {
+		http.Error(w, "Both ingredient and substitute are required", http.StatusBadRequest)
+		return
+	}
+
+	h.enhancedSearch.AddIngredientSubstitute(req.Ingredient, req.Substitute)
+	h.logger.Log("ingredient_substitute_added", 0)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"status": "success", "message": "Substitute added successfully"})
 }
