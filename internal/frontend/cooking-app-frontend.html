@@ -12,6 +12,7 @@
         :root {
             --cream: #FFF8F0;
             --sage: #9CAF88;
+            --light-sage: rgba(156, 175, 136, 0.25);
             --forest: #2F5233;
             --terracotta: #D4745E;
             --charcoal: #2D2D2A;
@@ -38,7 +39,6 @@
             position: relative;
         }
 
-        /* Decorative background */
         .bg-pattern {
             position: fixed;
             top: 0;
@@ -54,7 +54,6 @@
             z-index: 0;
         }
 
-        /* Header */
         .header {
             position: sticky;
             top: 0;
@@ -138,6 +137,12 @@
             box-shadow: 0 6px 20px rgba(47, 82, 51, 0.2);
         }
 
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .btn-secondary {
             background: transparent;
             color: var(--forest);
@@ -159,7 +164,6 @@
             background: rgba(156, 175, 136, 0.1);
         }
 
-        /* Container */
         .container {
             max-width: 1400px;
             margin: 0 auto;
@@ -168,10 +172,9 @@
             z-index: 1;
         }
 
-        /* Hero Section */
         .hero {
             text-align: center;
-            padding: 4rem 0;
+            padding: 4rem 0 2rem;
             animation: fadeIn 0.8s ease-out 0.2s both;
         }
 
@@ -204,7 +207,161 @@
             margin: 0 auto 2rem;
         }
 
-        /* Grid */
+        .search-section {
+            max-width: 900px;
+            margin: 0 auto 3rem;
+        }
+
+        .search-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .search-tab {
+            padding: 0.75rem 2rem;
+            background: white;
+            border: 2px solid var(--sage);
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .search-tab.active {
+            background: var(--sage);
+            color: white;
+        }
+
+        .search-tab:hover:not(.active) {
+            background: var(--light-sage);
+        }
+
+        .text-search {
+            display: flex;
+            gap: 1rem;
+            width: 100%;
+        }
+
+        .ingredient-search {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 40px var(--shadow);
+        }
+
+        .ingredient-input-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+            min-height: 50px;
+            padding: 0.75rem;
+            border: 2px solid var(--light-sage);
+            border-radius: 12px;
+            background: var(--cream);
+            margin-bottom: 1.5rem;
+        }
+
+        .ingredient-tag {
+            background: var(--sage);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .ingredient-tag button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ingredient-tag button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .ingredient-input {
+            flex: 1;
+            min-width: 200px;
+            border: none;
+            background: transparent;
+            outline: none;
+            font-size: 1rem;
+            padding: 0.5rem;
+            font-family: 'IBM Plex Sans', sans-serif;
+        }
+
+        .ingredient-input::placeholder {
+            color: var(--charcoal);
+            opacity: 0.5;
+        }
+
+        .search-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+
+        .search-options {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .toggle {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: var(--light-sage);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle.active {
+            background: var(--sage);
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle.active .toggle-slider {
+            transform: translateX(24px);
+        }
+
         .recipes-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -212,7 +369,6 @@
             animation: fadeIn 0.8s ease-out 0.4s both;
         }
 
-        /* Recipe Card */
         .recipe-card {
             background: white;
             border-radius: 20px;
@@ -290,6 +446,7 @@
             color: var(--charcoal);
             opacity: 0.6;
             margin-bottom: 1rem;
+            flex-wrap: wrap;
         }
 
         .recipe-meta span {
@@ -298,8 +455,30 @@
             gap: 0.3rem;
         }
 
+        .match-score-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: white;
+            z-index: 10;
+        }
 
-        /* Modal */
+        .match-score-badge.high {
+            background: var(--sage);
+        }
+
+        .match-score-badge.medium {
+            background: var(--gold);
+        }
+
+        .match-score-badge.low {
+            background: var(--terracotta);
+        }
+
         .modal-overlay {
             position: fixed;
             inset: 0;
@@ -419,6 +598,52 @@
             font-size: 0.9rem;
         }
 
+        .ingredient-checklist {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .ingredient-checklist-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .ingredient-checklist-row .ingredient-select {
+            flex: 2;
+            min-width: 0;
+        }
+
+        .ingredient-checklist-row .ingredient-qty {
+            flex: 1.5;
+            min-width: 120px;
+        }
+
+        .ingredient-remove {
+            flex-shrink: 0;
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            font-size: 1.5rem;
+            line-height: 1;
+            color: var(--terracotta);
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .ingredient-remove:hover {
+            background: rgba(212, 116, 94, 0.1);
+            border-radius: 8px;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+
         .loading {
             text-align: center;
             padding: 3rem;
@@ -435,6 +660,7 @@
             border-top-color: var(--sage);
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
+            margin-bottom: 1rem;
         }
 
         @keyframes spin {
@@ -466,7 +692,6 @@
             margin-bottom: 2rem;
         }
 
-        /* Recipe Detail */
         .recipe-detail-header {
             background: linear-gradient(135deg, var(--sage), var(--forest));
             padding: 3rem 2rem;
@@ -514,214 +739,15 @@
             white-space: pre-wrap;
         }
 
-        /* Search Tabs */
-        .search-tabs {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .search-tab {
-            padding: 0.75rem 2rem;
-            background: white;
-            border: 2px solid var(--sage);
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 500;
-        }
-
-        .search-tab.active {
-            background: var(--sage);
-            color: white;
-        }
-
-        /* Ingredient Search */
-        .ingredient-search {
-            background: white;
-            border-radius: 16px;
-            padding: 2rem;
-            box-shadow: 0 10px 40px var(--shadow);
-            margin-bottom: 3rem;
-            animation: fadeInUp 0.8s ease-out 0.2s both;
-        }
-
-        .ingredient-input-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
-            min-height: 50px;
-            padding: 0.75rem;
-            border: 2px solid var(--light-sage);
-            border-radius: 12px;
-            background: var(--cream);
-        }
-
-        .ingredient-tag {
-            background: var(--sage);
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.9rem;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .ingredient-tag button {
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-            font-size: 1.2rem;
-            padding: 0;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .ingredient-tag button:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .ingredient-input {
-            flex: 1;
-            min-width: 200px;
-            border: none;
-            background: transparent;
-            outline: none;
-            font-size: 1rem;
-            padding: 0.5rem;
-        }
-
-        .ingredient-input::placeholder {
-            color: var(--charcoal);
-            opacity: 0.5;
-        }
-
-        .search-controls {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .search-options {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-            flex: 1;
-        }
-
-        .toggle-container {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .toggle {
-            position: relative;
-            width: 50px;
-            height: 26px;
-            background: var(--light-sage);
-            border-radius: 13px;
-            cursor: pointer;
-            transition: background 0.3s ease;
-        }
-
-        .toggle.active {
-            background: var(--sage);
-        }
-
-        .toggle-slider {
-            position: absolute;
-            top: 3px;
-            left: 3px;
-            width: 20px;
-            height: 20px;
-            background: white;
-            border-radius: 50%;
-            transition: transform 0.3s ease;
-        }
-
-        .toggle.active .toggle-slider {
-            transform: translateX(24px);
-        }
-
-        /* Match Score Badge */
-        .match-score {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: var(--gold);
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .match-score.high {
-            background: var(--sage);
-        }
-
-        .match-score.medium {
-            background: var(--gold);
-        }
-
-        .match-score.low {
-            background: var(--terracotta);
-        }
-
-        /* Match Details */
-        .match-details {
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--light-sage);
-        }
-
-        .match-detail-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.25rem 0;
-            font-size: 0.85rem;
-        }
-
-        .match-type {
-            padding: 0.2rem 0.5rem;
-            border-radius: 10px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-
-        .match-type.exact {
-            background: var(--sage);
-            color: white;
-        }
-
-        .match-type.synonym {
-            background: var(--gold);
-            color: white;
-        }
-
-        .match-type.substitute {
+        .clear-search {
             background: var(--terracotta);
             color: white;
         }
 
-        .match-type.fuzzy {
-            background: var(--charcoal);
-            color: white;
+        .clear-search:hover {
+            background: #C36550;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
             .hero h1 {
                 font-size: 2.5rem;
@@ -740,6 +766,14 @@
                 width: 100%;
                 justify-content: center;
             }
+
+            .search-options {
+                width: 100%;
+            }
+
+            .toggle-container {
+                font-size: 0.9rem;
+            }
         }
     </style>
 </head>
@@ -749,25 +783,39 @@
 <script type="text/babel">
     const { useState, useEffect } = React;
 
-    // API Configuration
-    const API_BASE_URL = 'http://localhost:8080/api';
+    const API_BASE_URL = '/api';
 
-    // API Service
+    async function handleResponse(response) {
+        const text = await response.text();
+        if (!response.ok) {
+            let msg = text || `Request failed (${response.status})`;
+            try {
+                const j = JSON.parse(text);
+                if (j.error) msg = j.error;
+                else if (j.message) msg = j.message;
+            } catch (_) {}
+            throw new Error(msg);
+        }
+        return text ? JSON.parse(text) : null;
+    }
+
     const api = {
-        // Basic recipe search
-        searchRecipes: async (query) => {
-            const url = query ? `${API_BASE_URL}/recipes?search=${encodeURIComponent(query)}` : `${API_BASE_URL}/recipes`;
+        searchRecipes: async (query, ingredientsList) => {
+            let url = `${API_BASE_URL}/recipes`;
+            if (ingredientsList && ingredientsList.length > 0) {
+                url += '?ingredients=' + encodeURIComponent(ingredientsList.join(','));
+            } else if (query) {
+                url += '?search=' + encodeURIComponent(query);
+            }
             const response = await fetch(url);
-            return response.json();
+            const data = await handleResponse(response);
+            return Array.isArray(data) ? data : [];
         },
 
-        // Advanced ingredient search
         searchByIngredients: async (ingredients, useAdvanced = true, maxResults = 20, minScore = 0.3) => {
             const response = await fetch(`${API_BASE_URL}/recipes/search/advanced`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ingredients: ingredients,
                     use_advanced: useAdvanced,
@@ -775,60 +823,51 @@
                     min_match_score: minScore
                 })
             });
-            return response.json();
+            const data = await handleResponse(response);
+            return data;
         },
 
-        // Get ingredient substitutes
-        getSubstitutes: async (ingredient) => {
-            const response = await fetch(`${API_BASE_URL}/ingredients/${encodeURIComponent(ingredient)}/substitutes`);
-            return response.json();
-        },
-
-        // Get ingredient synonyms
-        getSynonyms: async (ingredient) => {
-            const response = await fetch(`${API_BASE_URL}/ingredients/${encodeURIComponent(ingredient)}/synonyms`);
-            return response.json();
-        },
-
-        // Basic CRUD operations
         getRecipes: async () => {
             const response = await fetch(`${API_BASE_URL}/recipes`);
-            return response.json();
+            const data = await handleResponse(response);
+            return Array.isArray(data) ? data : [];
         },
 
         getRecipe: async (id) => {
             const response = await fetch(`${API_BASE_URL}/recipes/${id}`);
-            return response.json();
+            return handleResponse(response);
         },
 
         getIngredients: async () => {
             const response = await fetch(`${API_BASE_URL}/ingredients`);
-            return response.json();
+            const data = await handleResponse(response);
+            return Array.isArray(data) ? data : [];
         },
 
-        // Auth operations
         login: async (credentials) => {
             const response = await fetch(`${API_BASE_URL}/auth/login`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(credentials)
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: credentials.username, password: credentials.password })
             });
-            return response.json();
+            return handleResponse(response);
         },
 
         register: async (userData) => {
             const response = await fetch(`${API_BASE_URL}/auth/register`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(userData)
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: userData.username,
+                    email: userData.email,
+                    password: userData.password,
+                    first_name: userData.first_name || '',
+                    last_name: userData.last_name || ''
+                })
             });
-            return response.json();
+            return handleResponse(response);
         },
-        
+
         createRecipe: async (recipeData) => {
             const token = localStorage.getItem('token');
             const response = await fetch(`${API_BASE_URL}/recipes`, {
@@ -837,9 +876,52 @@
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify(recipeData)
+                body: JSON.stringify({
+                    name: recipeData.name,
+                    description: recipeData.description || '',
+                    instructions: recipeData.instructions || '',
+                    prep_time_min: recipeData.prep_time_min || 0,
+                    cook_time_min: recipeData.cook_time_min || 0,
+                    ingredients: recipeData.ingredients || []
+                })
             });
-            return response.json();
+            return handleResponse(response);
+        },
+
+        updateRecipe: async (id, recipeData) => {
+            const token = localStorage.getItem('token');
+            const ingredients = (recipeData.ingredients || []).map(ri => ({
+                ingredient_id: ri.ingredient_id ?? ri.ingredient?.id ?? 0,
+                quantity: ri.quantity || ''
+            })).filter(ri => ri.ingredient_id);
+            const response = await fetch(`${API_BASE_URL}/recipes/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    name: recipeData.name,
+                    description: recipeData.description || '',
+                    instructions: recipeData.instructions || '',
+                    prep_time_min: recipeData.prep_time_min || 0,
+                    cook_time_min: recipeData.cook_time_min || 0,
+                    ingredients
+                })
+            });
+            return handleResponse(response);
+        },
+
+        deleteRecipe: async (id) => {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_BASE_URL}/recipes/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(text || `Delete failed (${response.status})`);
+            }
         }
     };
 
@@ -886,20 +968,16 @@
         return (
             <form onSubmit={handleSubmit}>
                 {error && <div className="error">{error}</div>}
-
                 <div className="form-group">
                     <label className="form-label">Username or Email</label>
-                    <label>
-                        <input
-                            type="text"
-                            className="form-input"
-                            value={formData.username}
-                            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                            required
-                        />
-                    </label>
+                    <input
+                        type="text"
+                        className="form-input"
+                        value={formData.username}
+                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                        required
+                    />
                 </div>
-
                 <div className="form-group">
                     <label className="form-label">Password</label>
                     <input
@@ -910,11 +988,9 @@
                         required
                     />
                 </div>
-
                 <button type="submit" className="btn btn-primary" style={{ width: '100%', marginBottom: '1rem' }} disabled={loading}>
                     {loading ? 'Signing in...' : 'Sign In'}
                 </button>
-
                 <button type="button" className="btn btn-ghost" style={{ width: '100%' }} onClick={onSwitch}>
                     Don't have an account? Register
                 </button>
@@ -953,7 +1029,6 @@
         return (
             <form onSubmit={handleSubmit}>
                 {error && <div className="error">{error}</div>}
-
                 <div className="form-group">
                     <label className="form-label">Username</label>
                     <input
@@ -964,7 +1039,6 @@
                         required
                     />
                 </div>
-
                 <div className="form-group">
                     <label className="form-label">Email</label>
                     <input
@@ -975,7 +1049,6 @@
                         required
                     />
                 </div>
-
                 <div className="form-group">
                     <label className="form-label">Password</label>
                     <input
@@ -987,7 +1060,6 @@
                         minLength="6"
                     />
                 </div>
-
                 <div className="form-group">
                     <label className="form-label">First Name (Optional)</label>
                     <input
@@ -997,7 +1069,6 @@
                         onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                     />
                 </div>
-
                 <div className="form-group">
                     <label className="form-label">Last Name (Optional)</label>
                     <input
@@ -1007,11 +1078,9 @@
                         onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                     />
                 </div>
-
                 <button type="submit" className="btn btn-primary" style={{ width: '100%', marginBottom: '1rem' }} disabled={loading}>
                     {loading ? 'Creating account...' : 'Create Account'}
                 </button>
-
                 <button type="button" className="btn btn-ghost" style={{ width: '100%' }} onClick={onSwitch}>
                     Already have an account? Sign in
                 </button>
@@ -1019,24 +1088,91 @@
         );
     }
 
-    function CreateRecipeForm({ onSuccess, onCancel }) {
-        const [formData, setFormData] = useState({
+    function RecipeForm({ initialRecipe, onSuccess, onCancel }) {
+        const isEdit = !!initialRecipe;
+        const [formData, setFormData] = useState(initialRecipe ? {
+            name: initialRecipe.name || '',
+            description: initialRecipe.description || '',
+            instructions: initialRecipe.instructions || '',
+            prep_time_min: initialRecipe.prep_time_min || 0,
+            cook_time_min: initialRecipe.cook_time_min || 0,
+            ingredients: (initialRecipe.ingredients || []).map(ri => ({
+                ingredient_id: ri.ingredient_id ?? ri.ingredient?.id,
+                quantity: ri.quantity || '',
+                ingredient: ri.ingredient || null
+            }))
+        } : {
             name: '',
             description: '',
             instructions: '',
             prep_time_min: 0,
             cook_time_min: 0,
+            ingredients: []
         });
+        const [availableIngredients, setAvailableIngredients] = useState([]);
         const [error, setError] = useState('');
         const [loading, setLoading] = useState(false);
+        const [loadingIngredients, setLoadingIngredients] = useState(true);
+
+        useEffect(() => {
+            let cancelled = false;
+            setLoadingIngredients(true);
+            api.getIngredients()
+                .then(list => {
+                    if (!cancelled && Array.isArray(list)) {
+                        setAvailableIngredients(list);
+                    }
+                })
+                .catch(err => {
+                    console.error('Failed to load ingredients:', err);
+                })
+                .finally(() => {
+                    if (!cancelled) setLoadingIngredients(false);
+                });
+            return () => { cancelled = true; };
+        }, []);
+
+        const addIngredientRow = () => {
+            const firstId = availableIngredients.length ? availableIngredients[0].id : 0;
+            const firstIng = availableIngredients.length ? availableIngredients[0] : null;
+            setFormData({ 
+                ...formData, 
+                ingredients: [...formData.ingredients, { 
+                    ingredient_id: firstId, 
+                    quantity: '', 
+                    ingredient: firstIng 
+                }] 
+            });
+        };
+
+        const updateIngredientRow = (index, field, value) => {
+            const next = formData.ingredients.slice();
+            if (field === 'ingredient_id') {
+                const ing = availableIngredients.find(i => i.id === parseInt(value, 10));
+                next[index] = { ...next[index], ingredient_id: ing ? ing.id : 0, ingredient: ing || null };
+            } else {
+                next[index] = { ...next[index], quantity: value };
+            }
+            setFormData({ ...formData, ingredients: next });
+        };
+
+        const removeIngredientRow = (index) => {
+            setFormData({ 
+                ...formData, 
+                ingredients: formData.ingredients.filter((_, i) => i !== index) 
+            });
+        };
 
         const handleSubmit = async (e) => {
             e.preventDefault();
             setError('');
             setLoading(true);
-
             try {
-                await api.createRecipe(formData);
+                if (isEdit) {
+                    await api.updateRecipe(initialRecipe.id, formData);
+                } else {
+                    await api.createRecipe(formData);
+                }
                 onSuccess();
             } catch (err) {
                 setError(err.message);
@@ -1048,7 +1184,6 @@
         return (
             <form onSubmit={handleSubmit}>
                 {error && <div className="error">{error}</div>}
-
                 <div className="form-group">
                     <label className="form-label">Recipe Name</label>
                     <input
@@ -1059,7 +1194,6 @@
                         required
                     />
                 </div>
-
                 <div className="form-group">
                     <label className="form-label">Description</label>
                     <textarea
@@ -1068,7 +1202,6 @@
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     />
                 </div>
-
                 <div className="form-group">
                     <label className="form-label">Instructions</label>
                     <textarea
@@ -1077,6 +1210,59 @@
                         onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
                         style={{ minHeight: '150px' }}
                     />
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">Ingredients</label>
+                    {loadingIngredients ? (
+                        <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--charcoal)', opacity: 0.6 }}>
+                            Loading ingredients...
+                        </div>
+                    ) : availableIngredients.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--terracotta)' }}>
+                            No ingredients available. Please contact administrator.
+                        </div>
+                    ) : (
+                        <div className="ingredient-checklist">
+                            {formData.ingredients.map((ri, index) => (
+                                <div key={index} className="ingredient-checklist-row">
+                                    <select
+                                        className="form-input ingredient-select"
+                                        value={ri.ingredient_id || ''}
+                                        onChange={(e) => updateIngredientRow(index, 'ingredient_id', e.target.value)}
+                                    >
+                                        <option value="">— Select Ingredient —</option>
+                                        {availableIngredients.map(ing => (
+                                            <option key={ing.id} value={ing.id}>{ing.name}</option>
+                                        ))}
+                                    </select>
+                                    <input
+                                        type="text"
+                                        className="form-input ingredient-qty"
+                                        placeholder="e.g. 2 cups, 100g, 3 pieces"
+                                        value={ri.quantity || ''}
+                                        onChange={(e) => updateIngredientRow(index, 'quantity', e.target.value)}
+                                    />
+                                    <button 
+                                        type="button" 
+                                        className="btn btn-ghost ingredient-remove" 
+                                        onClick={() => removeIngredientRow(index)} 
+                                        title="Remove ingredient"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                            ))}
+                            <button 
+                                type="button" 
+                                className="btn btn-secondary btn-sm" 
+                                onClick={addIngredientRow}
+                                disabled={availableIngredients.length === 0}
+                            >
+                                + Add Ingredient
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -1090,7 +1276,6 @@
                             min="0"
                         />
                     </div>
-
                     <div className="form-group">
                         <label className="form-label">Cook Time (min)</label>
                         <input
@@ -1102,10 +1287,9 @@
                         />
                     </div>
                 </div>
-
                 <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
                     <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={loading}>
-                        {loading ? 'Creating...' : 'Create Recipe'}
+                        {loading ? (isEdit ? 'Saving...' : 'Creating...') : (isEdit ? 'Save Recipe' : 'Create Recipe')}
                     </button>
                     <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={onCancel}>
                         Cancel
@@ -1115,42 +1299,79 @@
         );
     }
 
-    function RecipeCard({ recipe, onClick, matchDetails, score }) {
-        const totalTime = recipe.prep_time_min + recipe.cook_time_min;
+    function RecipeCard({ recipe, onClick }) {
+        const totalTime = (recipe.prep_time_min || 0) + (recipe.cook_time_min || 0);
+        const matchScore = recipe._matchScore;
+        const hasMatch = matchScore !== undefined && matchScore !== null;
+
+        let scoreClass = '';
+        if (hasMatch) {
+            if (matchScore >= 0.7) scoreClass = 'high';
+            else if (matchScore >= 0.4) scoreClass = 'medium';
+            else scoreClass = 'low';
+        }
 
         return (
             <div className="recipe-card" onClick={onClick}>
-                <div className="recipe-image">
-                    🍳
-                </div>
+                {hasMatch && (
+                    <div className={`match-score-badge ${scoreClass}`}>
+                        {Math.round(matchScore * 100)}% Match
+                    </div>
+                )}
+                <div className="recipe-image">🍳</div>
                 <div className="recipe-content">
                     <h3 className="recipe-title">{recipe.name}</h3>
                     <p className="recipe-description">{recipe.description || 'A delicious recipe'}</p>
                     <div className="recipe-meta">
                         <span>⏱️ {totalTime} min</span>
-                        <span>👨‍🍳 Prep {recipe.prep_time_min}m</span>
-                        {matchDetails && (
-                            <span>🔥 Match Score: {Math.round(score * 100)}%</span>
-                        )}
+                        <span>👨‍🍳 Prep {recipe.prep_time_min || 0}m</span>
+                        <span>🔥 Cook {recipe.cook_time_min || 0}m</span>
                     </div>
                 </div>
             </div>
         );
     }
 
-    function RecipeDetail({ recipe, onClose }) {
+    function RecipeDetail({ recipe, user, onClose, onEdit, onDelete, onRefresh }) {
+        const [deleting, setDeleting] = useState(false);
+        const totalTime = (recipe.prep_time_min || 0) + (recipe.cook_time_min || 0);
+        const ingredients = recipe.ingredients || [];
+
+        const handleDelete = async () => {
+            if (!window.confirm('Delete this recipe?')) return;
+            setDeleting(true);
+            try {
+                await api.deleteRecipe(recipe.id);
+                onRefresh();
+                onClose();
+            } catch (err) {
+                alert(err.message || 'Delete failed');
+            } finally {
+                setDeleting(false);
+            }
+        };
+
         return (
             <Modal isOpen={true} onClose={onClose} title="">
                 <div style={{ margin: '-2rem' }}>
                     <div className="recipe-detail-header">
                         <h2 className="recipe-detail-title">{recipe.name}</h2>
                         <div className="recipe-meta" style={{ color: 'rgba(255,255,255,0.9)' }}>
-                            <span>⏱️ Total: {recipe.prep_time_min + recipe.cook_time_min} min</span>
-                            <span>📝 Prep: {recipe.prep_time_min} min</span>
-                            <span>🔥 Cook: {recipe.cook_time_min} min</span>
+                            <span>⏱️ Total: {totalTime} min</span>
+                            <span>📝 Prep: {recipe.prep_time_min || 0} min</span>
+                            <span>🔥 Cook: {recipe.cook_time_min || 0} min</span>
                         </div>
+                        {user && (
+                            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+                                <button className="btn btn-secondary" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', borderColor: 'rgba(255,255,255,0.6)' }} onClick={() => { onClose(); onEdit(recipe); }}>
+                                    Edit Recipe
+                                </button>
+                                <button className="btn btn-secondary" style={{ background: 'rgba(212,116,94,0.9)', color: 'white', borderColor: 'rgba(255,255,255,0.4)' }} onClick={handleDelete} disabled={deleting}>
+                                    {deleting ? 'Deleting...' : 'Delete'}
+                                </button>
+                            </div>
+                        )}
                     </div>
-
                     <div className="recipe-detail-body">
                         {recipe.description && (
                             <div className="recipe-detail-section">
@@ -1158,7 +1379,18 @@
                                 <p>{recipe.description}</p>
                             </div>
                         )}
-
+                        {ingredients.length > 0 && (
+                            <div className="recipe-detail-section">
+                                <h3>🥗 Ingredients</h3>
+                                <ul className="recipe-instructions" style={{ listStyle: 'none', paddingLeft: 0 }}>
+                                    {ingredients.map((ri, idx) => (
+                                        <li key={idx} style={{ marginBottom: '0.35rem' }}>
+                                            {(ri.quantity ? ri.quantity + ' ' : '') + (ri.ingredient && ri.ingredient.name ? ri.ingredient.name : '—')}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
                         {recipe.instructions && (
                             <div className="recipe-detail-section">
                                 <h3>👨‍🍳 Instructions</h3>
@@ -1171,6 +1403,103 @@
         );
     }
 
+    function IngredientSearch({ onSearch, loading, onClear }) {
+        const [ingredients, setIngredients] = useState([]);
+        const [inputValue, setInputValue] = useState('');
+        const [useAdvanced, setUseAdvanced] = useState(true);
+        const [minScore, setMinScore] = useState(0.3);
+
+        const addIngredient = (e) => {
+            e.preventDefault();
+            if (inputValue.trim() && !ingredients.includes(inputValue.trim())) {
+                const newIngredients = [...ingredients, inputValue.trim()];
+                setIngredients(newIngredients);
+                setInputValue('');
+            }
+        };
+
+        const removeIngredient = (ingredient) => {
+            setIngredients(ingredients.filter(ing => ing !== ingredient));
+        };
+
+        const handleSearch = () => {
+            if (ingredients.length > 0) {
+                onSearch(ingredients, useAdvanced, minScore);
+            }
+        };
+
+        const handleClear = () => {
+            setIngredients([]);
+            setInputValue('');
+            onClear();
+        };
+
+        return (
+            <div className="ingredient-search">
+                <div className="ingredient-input-container">
+                    {ingredients.map((ingredient, index) => (
+                        <div key={index} className="ingredient-tag">
+                            {ingredient}
+                            <button type="button" onClick={() => removeIngredient(ingredient)}>×</button>
+                        </div>
+                    ))}
+                    <form onSubmit={addIngredient} style={{ display: 'flex', flex: 1, minWidth: '200px' }}>
+                        <input
+                            type="text"
+                            className="ingredient-input"
+                            placeholder="Type ingredient and press Enter..."
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value)}
+                        />
+                    </form>
+                </div>
+
+                <div className="search-controls">
+                    <div className="search-options">
+                        <div className="toggle-container">
+                            <span>Advanced Matching</span>
+                            <div 
+                                className={`toggle ${useAdvanced ? 'active' : ''}`}
+                                onClick={() => setUseAdvanced(!useAdvanced)}
+                            >
+                                <div className="toggle-slider"></div>
+                            </div>
+                        </div>
+                        <div className="toggle-container">
+                            <span>Min Score: {Math.round(minScore * 100)}%</span>
+                            <input 
+                                type="range" 
+                                min="0" 
+                                max="100" 
+                                value={minScore * 100}
+                                onChange={(e) => setMinScore(e.target.value / 100)}
+                                style={{ width: '120px' }}
+                            />
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button 
+                            className="btn btn-primary" 
+                            onClick={handleSearch}
+                            disabled={ingredients.length === 0 || loading}
+                        >
+                            {loading ? 'Searching...' : 'Find Recipes'}
+                        </button>
+                        {ingredients.length > 0 && (
+                            <button 
+                                className="btn clear-search"
+                                onClick={handleClear}
+                                disabled={loading}
+                            >
+                                Clear
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     function App() {
         const [user, setUser] = useState(null);
         const [recipes, setRecipes] = useState([]);
@@ -1178,9 +1507,11 @@
         const [showAuthModal, setShowAuthModal] = useState(false);
         const [authMode, setAuthMode] = useState('login');
         const [showCreateRecipe, setShowCreateRecipe] = useState(false);
+        const [editingRecipe, setEditingRecipe] = useState(null);
         const [selectedRecipe, setSelectedRecipe] = useState(null);
         const [searchQuery, setSearchQuery] = useState('');
         const [searchMode, setSearchMode] = useState('text');
+        const [isSearchActive, setIsSearchActive] = useState(false);
 
         useEffect(() => {
             const storedUser = localStorage.getItem('user');
@@ -1192,9 +1523,10 @@
 
         const loadRecipes = async () => {
             setLoading(true);
+            setIsSearchActive(false);
             try {
                 const data = await api.getRecipes();
-                setRecipes(data || []);
+                setRecipes(data);
             } catch (err) {
                 console.error('Failed to load recipes:', err);
                 setRecipes([]);
@@ -1215,129 +1547,75 @@
             setUser(null);
         };
 
-        const handleCreateRecipe = async () => {
+        const handleCreateRecipeSuccess = () => {
             setShowCreateRecipe(false);
-            await loadRecipes();
+            loadRecipes();
         };
 
-        const handleSearch = async (e) => {
+        const handleEditRecipeSuccess = () => {
+            setEditingRecipe(null);
+            loadRecipes();
+            setSelectedRecipe(null);
+        };
+
+        const openEditRecipe = (recipe) => {
+            setEditingRecipe(recipe);
+        };
+
+        const handleTextSearch = async (e) => {
             e.preventDefault();
             if (!searchQuery.trim()) {
                 loadRecipes();
                 return;
             }
-
             setLoading(true);
+            setIsSearchActive(true);
             try {
                 const data = await api.searchRecipes(searchQuery);
-                setRecipes(data || []);
+                setRecipes(data);
             } catch (err) {
                 console.error('Search failed:', err);
+                setRecipes([]);
             } finally {
                 setLoading(false);
             }
         };
 
         const handleIngredientSearch = async (ingredients, useAdvanced, minScore) => {
+            if (!ingredients || ingredients.length === 0) {
+                loadRecipes();
+                return;
+            }
+
             setLoading(true);
+            setIsSearchActive(true);
             try {
                 const data = await api.searchByIngredients(ingredients, useAdvanced, 20, minScore);
                 
-                if (data.advanced_matches) {
+                if (data.advanced_matches && data.advanced_matches.length > 0) {
                     const recipesWithMatches = data.advanced_matches.map(match => ({
                         ...match.recipe,
                         _matchDetails: match.match_details,
                         _matchScore: match.overall_score
                     }));
                     setRecipes(recipesWithMatches);
+                } else if (data.recipes && data.recipes.length > 0) {
+                    setRecipes(data.recipes);
                 } else {
-                    setRecipes(data.recipes || []);
+                    setRecipes([]);
                 }
             } catch (err) {
                 console.error('Ingredient search failed:', err);
+                setRecipes([]);
             } finally {
                 setLoading(false);
             }
         };
 
-        function IngredientSearch({ onSearch, loading }) {
-            const [ingredients, setIngredients] = useState([]);
-            const [inputValue, setInputValue] = useState('');
-            const [useAdvanced, setUseAdvanced] = useState(true);
-            const [minScore, setMinScore] = useState(0.3);
-
-            const addIngredient = (e) => {
-                e.preventDefault();
-                if (inputValue.trim() && !ingredients.includes(inputValue.trim())) {
-                    setIngredients([...ingredients, inputValue.trim()]);
-                    setInputValue('');
-                }
-            };
-
-            const removeIngredient = (ingredient) => {
-                setIngredients(ingredients.filter(ing => ing !== ingredient));
-            };
-
-            const handleSearch = () => {
-                if (ingredients.length > 0) {
-                    onSearch(ingredients, useAdvanced, minScore);
-                }
-            };
-
-            return (
-                <div className="ingredient-search">
-                    <div className="ingredient-input-container">
-                        {ingredients.map((ingredient, index) => (
-                            <div key={index} className="ingredient-tag">
-                                {ingredient}
-                                <button onClick={() => removeIngredient(ingredient)}>×</button>
-                            </div>
-                        ))}
-                        <form onSubmit={addIngredient} style={{ display: 'flex', flex: 1 }}>
-                            <input
-                                type="text"
-                                className="ingredient-input"
-                                placeholder="Add ingredient..."
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                            />
-                        </form>
-                    </div>
-
-                    <div className="search-controls">
-                        <div className="search-options">
-                            <div className="toggle-container">
-                                <span>Advanced Matching</span>
-                                <div 
-                                    className={`toggle ${useAdvanced ? 'active' : ''}`}
-                                    onClick={() => setUseAdvanced(!useAdvanced)}
-                                >
-                                    <div className="toggle-slider"></div>
-                                </div>
-                            </div>
-                            <div className="toggle-container">
-                                <span>Min Score: {Math.round(minScore * 100)}%</span>
-                                <input 
-                                    type="range" 
-                                    min="0" 
-                                    max="100" 
-                                    value={minScore * 100}
-                                    onChange={(e) => setMinScore(e.target.value / 100)}
-                                    style={{ width: '100px' }}
-                                />
-                            </div>
-                        </div>
-                        <button 
-                            className="btn btn-primary" 
-                            onClick={handleSearch}
-                            disabled={ingredients.length === 0 || loading}
-                        >
-                            {loading ? 'Searching...' : 'Find Recipes'}
-                        </button>
-                    </div>
-                </div>
-            );
-        }
+        const handleClearSearch = () => {
+            setSearchQuery('');
+            loadRecipes();
+        };
 
         return (
             <div className="app">
@@ -1345,12 +1623,15 @@
 
                 <header className="header">
                     <div className="logo">
-                        <div className="logo-icon">�</div>
+                        <div className="logo-icon">🍳</div>
                         Cooking App
                     </div>
                     <nav className="nav">
                         {user ? (
                             <>
+                                <button className="btn btn-ghost" onClick={() => setShowCreateRecipe(true)}>
+                                    Create Recipe
+                                </button>
                                 <button className="btn btn-secondary" onClick={handleLogout}>
                                     Logout
                                 </button>
@@ -1372,7 +1653,9 @@
                     <div className="hero">
                         <h1>Discover & Share<br/>Amazing Recipes</h1>
                         <p>Join our community of home cooks and explore thousands of delicious recipes</p>
+                    </div>
 
+                    <div className="search-section">
                         <div className="search-tabs">
                             <div 
                                 className={`search-tab ${searchMode === 'text' ? 'active' : ''}`}
@@ -1384,26 +1667,34 @@
                                 className={`search-tab ${searchMode === 'ingredients' ? 'active' : ''}`}
                                 onClick={() => setSearchMode('ingredients')}
                             >
-                                🧠 Ingredient Matching
+                                🧠 Smart Ingredient Matching
                             </div>
                         </div>
 
                         {searchMode === 'text' ? (
-                            <form onSubmit={handleSearch} style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', gap: '1rem' }}>
+                            <form onSubmit={handleTextSearch} className="text-search">
                                 <input
                                     type="text"
                                     className="form-input"
-                                    placeholder="Search recipes..."
+                                    placeholder="Search recipes by name or description..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     style={{ flex: 1 }}
                                 />
-                                <button type="submit" className="btn btn-primary">Search</button>
+                                <button type="submit" className="btn btn-primary" disabled={loading}>
+                                    {loading ? 'Searching...' : 'Search'}
+                                </button>
+                                {isSearchActive && (
+                                    <button type="button" className="btn clear-search" onClick={handleClearSearch}>
+                                        Clear
+                                    </button>
+                                )}
                             </form>
                         ) : (
                             <IngredientSearch 
                                 onSearch={handleIngredientSearch}
                                 loading={loading}
+                                onClear={loadRecipes}
                             />
                         )}
                     </div>
@@ -1411,31 +1702,45 @@
                     {loading ? (
                         <div className="loading">
                             <div className="spinner"></div>
-                            <p>{searchMode === 'ingredients' ? 'Finding perfect recipes...' : 'Loading recipes...'}</p>
+                            <p>Loading recipes...</p>
                         </div>
                     ) : recipes.length === 0 ? (
                         <div className="empty-state">
                             <div className="empty-state-icon">🍽️</div>
-                            <h2>{searchMode === 'ingredients' ? 'No recipes found' : 'No recipes yet'}</h2>
-                            <p>{searchMode === 'ingredients' ? 'Try different ingredients or search terms' : 'Be the first to share a delicious recipe with the community!'}</p>
-                            {user && searchMode === 'text' && (
+                            <h2>{isSearchActive ? 'No recipes found' : 'No recipes yet'}</h2>
+                            <p>
+                                {isSearchActive 
+                                    ? 'Try different search terms or ingredients' 
+                                    : 'Be the first to share a delicious recipe with the community!'}
+                            </p>
+                            {user && !isSearchActive && (
                                 <button className="btn btn-primary" onClick={() => setShowCreateRecipe(true)}>
                                     Create First Recipe
                                 </button>
                             )}
+                            {isSearchActive && (
+                                <button className="btn btn-secondary" onClick={loadRecipes}>
+                                    View All Recipes
+                                </button>
+                            )}
                         </div>
                     ) : (
-                        <div className="recipes-grid">
-                            {recipes.map((recipe) => (
-                                <RecipeCard
-                                    key={recipe.id}
-                                    recipe={recipe}
-                                    matchDetails={recipe._matchDetails}
-                                    score={recipe._matchScore}
-                                    onClick={() => setSelectedRecipe(recipe)}
-                                />
-                            ))}
-                        </div>
+                        <>
+                            {isSearchActive && (
+                                <div style={{ textAlign: 'center', marginBottom: '2rem', color: 'var(--charcoal)', opacity: 0.7 }}>
+                                    Found {recipes.length} recipe{recipes.length !== 1 ? 's' : ''}
+                                </div>
+                            )}
+                            <div className="recipes-grid">
+                                {recipes.map((recipe) => (
+                                    <RecipeCard
+                                        key={recipe.id}
+                                        recipe={recipe}
+                                        onClick={() => setSelectedRecipe(recipe)}
+                                    />
+                                ))}
+                            </div>
+                        </>
                     )}
                 </div>
 
@@ -1462,16 +1767,34 @@
                     onClose={() => setShowCreateRecipe(false)}
                     title="Create New Recipe"
                 >
-                    <CreateRecipeForm
-                        onSuccess={handleCreateRecipe}
+                    <RecipeForm
+                        onSuccess={handleCreateRecipeSuccess}
                         onCancel={() => setShowCreateRecipe(false)}
                     />
+                </Modal>
+
+                <Modal
+                    isOpen={!!editingRecipe}
+                    onClose={() => setEditingRecipe(null)}
+                    title="Edit Recipe"
+                >
+                    {editingRecipe && (
+                        <RecipeForm
+                            initialRecipe={editingRecipe}
+                            onSuccess={handleEditRecipeSuccess}
+                            onCancel={() => setEditingRecipe(null)}
+                        />
+                    )}
                 </Modal>
 
                 {selectedRecipe && (
                     <RecipeDetail
                         recipe={selectedRecipe}
+                        user={user}
                         onClose={() => setSelectedRecipe(null)}
+                        onEdit={openEditRecipe}
+                        onDelete={() => {}}
+                        onRefresh={loadRecipes}
                     />
                 )}
             </div>

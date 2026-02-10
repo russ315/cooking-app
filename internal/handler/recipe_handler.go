@@ -2,11 +2,13 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"cooking-app/internal/logger"
+	"cooking-app/internal/middleware"
 	"cooking-app/internal/models"
 	"cooking-app/internal/recipe"
 	"cooking-app/internal/repository"
@@ -88,7 +90,8 @@ func (h *RecipeHandler) CreateRecipe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	created := h.repo.Create(&req)
+	userID := middleware.MustGetUserID(r)
+	created := h.repo.Create(&req, userID)
 	h.search.NotifyRecipeChange(created.ID)
 	h.logger.Log("recipe_created", created.ID)
 
@@ -112,8 +115,13 @@ func (h *RecipeHandler) UpdateRecipe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updated, err := h.repo.Update(id, &req)
+	userID := middleware.MustGetUserID(r)
+	updated, err := h.repo.Update(id, &req, userID)
 	if err != nil {
+		if errors.Is(err, repository.ErrRecipeForbidden) {
+			http.Error(w, "Recipe can only be changed by its creator", http.StatusForbidden)
+			return
+		}
 		http.Error(w, "Recipe not found", http.StatusNotFound)
 		return
 	}
@@ -134,7 +142,12 @@ func (h *RecipeHandler) DeleteRecipe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.repo.Delete(id); err != nil {
+	userID := middleware.MustGetUserID(r)
+	if err := h.repo.Delete(id, userID); err != nil {
+		if errors.Is(err, repository.ErrRecipeForbidden) {
+			http.Error(w, "Recipe can only be deleted by its creator", http.StatusForbidden)
+			return
+		}
 		http.Error(w, "Recipe not found", http.StatusNotFound)
 		return
 	}

@@ -53,6 +53,7 @@ func createTables(db *sql.DB) error {
 			instructions TEXT,
 			prep_time_min INT NOT NULL DEFAULT 0,
 			cook_time_min INT NOT NULL DEFAULT 0,
+			user_id INT REFERENCES users(id) ON DELETE SET NULL,
 			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 		)`,
 		`CREATE TABLE IF NOT EXISTS recipe_ingredients (
@@ -75,6 +76,11 @@ func createTables(db *sql.DB) error {
 
 	// Add unique constraints if missing
 	if err := addUniqueConstraintsIfMissing(db); err != nil {
+		return err
+	}
+
+	// Add user_id to recipes if missing (creator ownership)
+	if err := addRecipeUserIDIfMissing(db); err != nil {
 		return err
 	}
 
@@ -114,6 +120,26 @@ func addPasswordColumnIfMissing(db *sql.DB) error {
 		log.Println("✓ Password column added to users table")
 	}
 
+	return nil
+}
+
+func addRecipeUserIDIfMissing(db *sql.DB) error {
+	var exists bool
+	err := db.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_name = 'recipes' AND column_name = 'user_id'
+		)
+	`).Scan(&exists)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		if _, err := db.Exec(`ALTER TABLE recipes ADD COLUMN user_id INT REFERENCES users(id) ON DELETE SET NULL`); err != nil {
+			return fmt.Errorf("add recipes.user_id column: %w", err)
+		}
+		log.Println("✓ recipes.user_id column added")
+	}
 	return nil
 }
 

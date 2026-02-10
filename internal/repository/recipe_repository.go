@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	ErrRecipeNotFound = errors.New("recipe not found")
+	ErrRecipeNotFound  = errors.New("recipe not found")
+	ErrRecipeForbidden = errors.New("recipe can only be changed or deleted by its creator")
 )
 
 // RecipeRepository stores recipes and ingredients in PostgreSQL.
@@ -24,11 +25,12 @@ func NewRecipeRepository(db *sql.DB) *RecipeRepository {
 	return &RecipeRepository{db: db}
 }
 
-// scanRecipe scans a recipe row and loads ingredients in a second query (or we could use a join and group).
+// scanRecipe scans a recipe row and loads ingredients in a second query.
 func (r *RecipeRepository) scanRecipe(row *sql.Row) (*models.Recipe, error) {
 	var rec models.Recipe
 	var desc, instructions sql.NullString
-	err := row.Scan(&rec.ID, &rec.Name, &desc, &instructions, &rec.PrepTimeMin, &rec.CookTimeMin, &rec.CreatedAt)
+	var userID sql.NullInt64
+	err := row.Scan(&rec.ID, &rec.Name, &desc, &instructions, &rec.PrepTimeMin, &rec.CookTimeMin, &userID, &rec.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrRecipeNotFound
@@ -37,6 +39,10 @@ func (r *RecipeRepository) scanRecipe(row *sql.Row) (*models.Recipe, error) {
 	}
 	rec.Description = desc.String
 	rec.Instructions = instructions.String
+	if userID.Valid {
+		uid := int(userID.Int64)
+		rec.UserID = &uid
+	}
 	rec.Ingredients, _ = r.loadIngredients(rec.ID)
 	return &rec, nil
 }
@@ -65,14 +71,14 @@ func (r *RecipeRepository) loadIngredients(recipeID int) ([]models.RecipeIngredi
 
 // GetByID returns a recipe by ID with ingredients.
 func (r *RecipeRepository) GetByID(id int) (*models.Recipe, error) {
-	row := r.db.QueryRow(`SELECT id, name, description, instructions, prep_time_min, cook_time_min, created_at
+	row := r.db.QueryRow(`SELECT id, name, description, instructions, prep_time_min, cook_time_min, user_id, created_at
 		FROM recipes WHERE id = $1`, id)
 	return r.scanRecipe(row)
 }
 
 // GetAll returns all recipes with ingredients.
 func (r *RecipeRepository) GetAll() []*models.Recipe {
-	rows, err := r.db.Query(`SELECT id, name, description, instructions, prep_time_min, cook_time_min, created_at FROM recipes ORDER BY id`)
+	rows, err := r.db.Query(`SELECT id, name, description, instructions, prep_time_min, cook_time_min, user_id, created_at FROM recipes ORDER BY id`)
 	if err != nil {
 		return nil
 	}
@@ -82,24 +88,29 @@ func (r *RecipeRepository) GetAll() []*models.Recipe {
 	for rows.Next() {
 		var rec models.Recipe
 		var desc, instructions sql.NullString
-		if err := rows.Scan(&rec.ID, &rec.Name, &desc, &instructions, &rec.PrepTimeMin, &rec.CookTimeMin, &rec.CreatedAt); err != nil {
+		var userID sql.NullInt64
+		if err := rows.Scan(&rec.ID, &rec.Name, &desc, &instructions, &rec.PrepTimeMin, &rec.CookTimeMin, &userID, &rec.CreatedAt); err != nil {
 			continue
 		}
 		rec.Description = desc.String
 		rec.Instructions = instructions.String
+		if userID.Valid {
+			uid := int(userID.Int64)
+			rec.UserID = &uid
+		}
 		rec.Ingredients, _ = r.loadIngredients(rec.ID)
 		list = append(list, &rec)
 	}
 	return list
 }
 
-// Create inserts a new recipe and its ingredients.
-func (r *RecipeRepository) Create(req *models.CreateRecipeRequest) *models.Recipe {
+// Create inserts a new recipe and its ingredients. userID is the creator (required).
+func (r *RecipeRepository) Create(req *models.CreateRecipeRequest, userID int) *models.Recipe {
 	var id int
 	var createdAt time.Time
-	err := r.db.QueryRow(`INSERT INTO recipes (name, description, instructions, prep_time_min, cook_time_min)
-		VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at`,
-		req.Name, req.Description, req.Instructions, req.PrepTimeMin, req.CookTimeMin).Scan(&id, &createdAt)
+	err := r.db.QueryRow(`INSERT INTO recipes (name, description, instructions, prep_time_min, cook_time_min, user_id)
+		VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, created_at`,
+		req.Name, req.Description, req.Instructions, req.PrepTimeMin, req.CookTimeMin, userID).Scan(&id, &createdAt)
 	if err != nil {
 		return nil
 	}
@@ -113,16 +124,19 @@ func (r *RecipeRepository) Create(req *models.CreateRecipeRequest) *models.Recip
 	return created
 }
 
-// Update updates recipe and replaces its ingredients.
-func (r *RecipeRepository) Update(id int, req *models.UpdateRecipeRequest) (*models.Recipe, error) {
-	res, err := r.db.Exec(`UPDATE recipes SET name = $1, description = $2, instructions = $3, prep_time_min = $4, cook_time_min = $5 WHERE id = $6`,
-		req.Name, req.Description, req.Instructions, req.PrepTimeMin, req.CookTimeMin, id)
+// Update updates recipe and replaces its ingredients. Only the creator can update.
+func (r *RecipeRepository) Update(id int, req *models.UpdateRecipeRequest, userID int) (*models.Recipe, error) {
+	rec, err := r.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		return nil, ErrRecipeNotFound
+	if rec.UserID == nil || *rec.UserID != userID {
+		return nil, ErrRecipeForbidden
+	}
+	_, err = r.db.Exec(`UPDATE recipes SET name = $1, description = $2, instructions = $3, prep_time_min = $4, cook_time_min = $5 WHERE id = $6`,
+		req.Name, req.Description, req.Instructions, req.PrepTimeMin, req.CookTimeMin, id)
+	if err != nil {
+		return nil, err
 	}
 
 	if _, err := r.db.Exec("DELETE FROM recipe_ingredients WHERE recipe_id = $1", id); err != nil {
@@ -135,8 +149,15 @@ func (r *RecipeRepository) Update(id int, req *models.UpdateRecipeRequest) (*mod
 	return r.GetByID(id)
 }
 
-// Delete removes a recipe (cascade deletes recipe_ingredients).
-func (r *RecipeRepository) Delete(id int) error {
+// Delete removes a recipe. Only the creator can delete. Cascade deletes recipe_ingredients.
+func (r *RecipeRepository) Delete(id int, userID int) error {
+	rec, err := r.GetByID(id)
+	if err != nil {
+		return err
+	}
+	if rec.UserID == nil || *rec.UserID != userID {
+		return ErrRecipeForbidden
+	}
 	res, err := r.db.Exec("DELETE FROM recipes WHERE id = $1", id)
 	if err != nil {
 		return err
@@ -155,7 +176,7 @@ func (r *RecipeRepository) SearchByName(query string) []*models.Recipe {
 		return r.GetAll()
 	}
 	pattern := "%" + query + "%"
-	rows, err := r.db.Query(`SELECT id, name, description, instructions, prep_time_min, cook_time_min, created_at
+	rows, err := r.db.Query(`SELECT id, name, description, instructions, prep_time_min, cook_time_min, user_id, created_at
 		FROM recipes WHERE LOWER(name) LIKE $1 OR LOWER(COALESCE(description,'')) LIKE $2 ORDER BY id`, pattern, pattern)
 	if err != nil {
 		return nil
@@ -166,11 +187,16 @@ func (r *RecipeRepository) SearchByName(query string) []*models.Recipe {
 	for rows.Next() {
 		var rec models.Recipe
 		var desc, instructions sql.NullString
-		if err := rows.Scan(&rec.ID, &rec.Name, &desc, &instructions, &rec.PrepTimeMin, &rec.CookTimeMin, &rec.CreatedAt); err != nil {
+		var userID sql.NullInt64
+		if err := rows.Scan(&rec.ID, &rec.Name, &desc, &instructions, &rec.PrepTimeMin, &rec.CookTimeMin, &userID, &rec.CreatedAt); err != nil {
 			continue
 		}
 		rec.Description = desc.String
 		rec.Instructions = instructions.String
+		if userID.Valid {
+			uid := int(userID.Int64)
+			rec.UserID = &uid
+		}
 		rec.Ingredients, _ = r.loadIngredients(rec.ID)
 		list = append(list, &rec)
 	}

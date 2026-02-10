@@ -10,6 +10,7 @@ type Recipe struct {
 	PrepTimeMin  int               `json:"prep_time_min"`
 	CookTimeMin  int               `json:"cook_time_min"`
 	Ingredients  []RecipeIngredient `json:"ingredients"`
+	UserID       *int               `json:"user_id,omitempty"` // creator; nil for legacy recipes
 	CreatedAt    time.Time         `json:"created_at"`
 }
 

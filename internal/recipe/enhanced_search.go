@@ -11,9 +11,9 @@ import (
 type RecipeRepository interface {
 	GetAll() []*models.Recipe
 	GetByID(id int) (*models.Recipe, error)
-	Create(req *models.CreateRecipeRequest) *models.Recipe
-	Update(id int, req *models.UpdateRecipeRequest) (*models.Recipe, error)
-	Delete(id int) error
+	Create(req *models.CreateRecipeRequest, userID int) *models.Recipe
+	Update(id int, req *models.UpdateRecipeRequest, userID int) (*models.Recipe, error)
+	Delete(id int, userID int) error
 	SearchByName(query string) []*models.Recipe
 	SearchByIngredients(names []string) []*models.Recipe
 	ListIngredients() []*models.Ingredient
