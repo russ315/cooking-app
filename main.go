@@ -60,12 +60,13 @@ func main() {
 	recipeRepo := repository.NewRecipeRepository(database)
 	activityLogger := logger.NewActivityLogger()
 	searchService := recipe.NewSearchService(recipeRepo)
+	enhancedSearchService := recipe.NewEnhancedSearchService(recipeRepo)
 	authService := auth.NewService(jwtSecret)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(userRepo, authService)
 	userHandler := handler.NewUserHandler(userRepo, activityLogger)
-	recipeHandler := handler.NewRecipeHandler(recipeRepo, searchService, activityLogger)
+	recipeHandler := handler.NewRecipeHandler(recipeRepo, searchService, enhancedSearchService, activityLogger)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(authService)
@@ -103,6 +104,11 @@ func main() {
 	router.HandleFunc("/api/recipes/{id:[0-9]+}", recipeHandler.GetRecipe).Methods("GET")
 	router.HandleFunc("/api/ingredients", recipeHandler.ListIngredients).Methods("GET")
 
+	// Enhanced ingredient matching routes (public)
+	router.HandleFunc("/api/recipes/search/advanced", recipeHandler.AdvancedIngredientSearch).Methods("POST")
+	router.HandleFunc("/api/ingredients/{name}/substitutes", recipeHandler.GetIngredientSubstitutes).Methods("GET")
+	router.HandleFunc("/api/ingredients/{name}/synonyms", recipeHandler.GetIngredientSynonyms).Methods("GET")
+
 	// Protected recipe routes
 	protectedRecipes := router.PathPrefix("/api/recipes").Subrouter()
 	protectedRecipes.Use(authMiddleware.Authenticate)
@@ -110,12 +116,18 @@ func main() {
 	protectedRecipes.HandleFunc("/{id:[0-9]+}", recipeHandler.UpdateRecipe).Methods("PUT")
 	protectedRecipes.HandleFunc("/{id:[0-9]+}", recipeHandler.DeleteRecipe).Methods("DELETE")
 
+	// Protected ingredient management routes
+	protectedIngredients := router.PathPrefix("/api/ingredients").Subrouter()
+	protectedIngredients.Use(authMiddleware.Authenticate)
+	protectedIngredients.HandleFunc("/synonyms", recipeHandler.AddIngredientSynonym).Methods("POST")
+	protectedIngredients.HandleFunc("/substitutes", recipeHandler.AddIngredientSubstitute).Methods("POST")
+
 	// Frontend: serve React single-page app for all non-API routes
 	frontendFS := http.FileServer(http.Dir("./internal/frontend"))
 	router.PathPrefix("/").Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Serve the main SPA HTML at the root path
-		if r.URL.Path == "/" {
-			r.URL.Path = "/cooking-app-frontend.html"
+		// Route to different pages based on path
+		if r.URL.Path == "/" || r.URL.Path == "/index.html" {
+			r.URL.Path = "/cooking-app-frontend.html" // Main app with login/register
 		}
 		frontendFS.ServeHTTP(w, r)
 	}))
@@ -131,6 +143,9 @@ func main() {
 	fmt.Println("    GET    /api/recipes                 - List recipes (search: ?search=... or ?ingredients=...)")
 	fmt.Println("    GET    /api/recipes/{id}            - Get recipe by ID")
 	fmt.Println("    GET    /api/ingredients             - List ingredients")
+	fmt.Println("    POST   /api/recipes/search/advanced - Advanced ingredient matching")
+	fmt.Println("    GET    /api/ingredients/{name}/substitutes - Get ingredient substitutes")
+	fmt.Println("    GET    /api/ingredients/{name}/synonyms     - Get ingredient synonyms")
 	fmt.Println()
 	fmt.Println("  PROTECTED (require Authorization: Bearer <token>):")
 	fmt.Println("    POST   /api/profile                 - Create profile")
@@ -139,13 +154,16 @@ func main() {
 	fmt.Println("    POST   /api/recipes                 - Create recipe")
 	fmt.Println("    PUT    /api/recipes/{id}            - Update recipe")
 	fmt.Println("    DELETE /api/recipes/{id}            - Delete recipe")
+	fmt.Println("    POST   /api/ingredients/synonyms    - Add ingredient synonym")
+	fmt.Println("    POST   /api/ingredients/substitutes - Add ingredient substitute")
 	fmt.Println()
 	fmt.Println("  🌐 CORS enabled for all origins")
+	fmt.Println("  🧠 Enhanced ingredient matching with fuzzy search, synonyms, and substitutes")
 	fmt.Println()
 
 	port := "8080"
 	fmt.Printf("🚀 Server starting on http://localhost:%s\n", port)
-	fmt.Println("   Frontend: Visit http://localhost:" + port + "/")
+	fmt.Println("   Main App: Visit http://localhost:" + port + "/")
 	fmt.Println()
 
 	if err := http.ListenAndServe(":"+port, router); err != nil {
