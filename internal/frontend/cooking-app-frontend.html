@@ -514,6 +514,213 @@
             white-space: pre-wrap;
         }
 
+        /* Search Tabs */
+        .search-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .search-tab {
+            padding: 0.75rem 2rem;
+            background: white;
+            border: 2px solid var(--sage);
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .search-tab.active {
+            background: var(--sage);
+            color: white;
+        }
+
+        /* Ingredient Search */
+        .ingredient-search {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 40px var(--shadow);
+            margin-bottom: 3rem;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        .ingredient-input-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            min-height: 50px;
+            padding: 0.75rem;
+            border: 2px solid var(--light-sage);
+            border-radius: 12px;
+            background: var(--cream);
+        }
+
+        .ingredient-tag {
+            background: var(--sage);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .ingredient-tag button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ingredient-tag button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .ingredient-input {
+            flex: 1;
+            min-width: 200px;
+            border: none;
+            background: transparent;
+            outline: none;
+            font-size: 1rem;
+            padding: 0.5rem;
+        }
+
+        .ingredient-input::placeholder {
+            color: var(--charcoal);
+            opacity: 0.5;
+        }
+
+        .search-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-options {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex: 1;
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .toggle {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: var(--light-sage);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle.active {
+            background: var(--sage);
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle.active .toggle-slider {
+            transform: translateX(24px);
+        }
+
+        /* Match Score Badge */
+        .match-score {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: var(--gold);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .match-score.high {
+            background: var(--sage);
+        }
+
+        .match-score.medium {
+            background: var(--gold);
+        }
+
+        .match-score.low {
+            background: var(--terracotta);
+        }
+
+        /* Match Details */
+        .match-details {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--light-sage);
+        }
+
+        .match-detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.25rem 0;
+            font-size: 0.85rem;
+        }
+
+        .match-type {
+            padding: 0.2rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .match-type.exact {
+            background: var(--sage);
+            color: white;
+        }
+
+        .match-type.synonym {
+            background: var(--gold);
+            color: white;
+        }
+
+        .match-type.substitute {
+            background: var(--terracotta);
+            color: white;
+        }
+
+        .match-type.fuzzy {
+            background: var(--charcoal);
+            color: white;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .hero h1 {
@@ -547,49 +754,95 @@
 
     // API Service
     const api = {
-        async request(endpoint, options = {}) {
-            const token = localStorage.getItem('token');
-            const headers = {
-                'Content-Type': 'application/json',
-                ...(token && { 'Authorization': `Bearer ${token}` }),
-                ...options.headers,
-            };
-
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-                ...options,
-                headers,
-            });
-
-            if (!response.ok) {
-                const error = await response.text();
-                throw new Error(error || 'Request failed');
-            }
-
+        // Basic recipe search
+        searchRecipes: async (query) => {
+            const url = query ? `${API_BASE_URL}/recipes?search=${encodeURIComponent(query)}` : `${API_BASE_URL}/recipes`;
+            const response = await fetch(url);
             return response.json();
         },
 
-        // Auth
-        register: (data) => api.request('/auth/register', {
-            method: 'POST',
-            body: JSON.stringify(data),
-        }),
+        // Advanced ingredient search
+        searchByIngredients: async (ingredients, useAdvanced = true, maxResults = 20, minScore = 0.3) => {
+            const response = await fetch(`${API_BASE_URL}/recipes/search/advanced`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ingredients: ingredients,
+                    use_advanced: useAdvanced,
+                    max_results: maxResults,
+                    min_match_score: minScore
+                })
+            });
+            return response.json();
+        },
 
-        login: (data) => api.request('/auth/login', {
-            method: 'POST',
-            body: JSON.stringify(data),
-        }),
+        // Get ingredient substitutes
+        getSubstitutes: async (ingredient) => {
+            const response = await fetch(`${API_BASE_URL}/ingredients/${encodeURIComponent(ingredient)}/substitutes`);
+            return response.json();
+        },
 
-        // Recipes
-        getRecipes: () => api.request('/recipes'),
-        getRecipe: (id) => api.request(`/recipes/${id}`),
-        createRecipe: (data) => api.request('/recipes', {
-            method: 'POST',
-            body: JSON.stringify(data),
-        }),
-        searchRecipes: (query) => api.request(`/recipes?search=${encodeURIComponent(query)}`),
+        // Get ingredient synonyms
+        getSynonyms: async (ingredient) => {
+            const response = await fetch(`${API_BASE_URL}/ingredients/${encodeURIComponent(ingredient)}/synonyms`);
+            return response.json();
+        },
+
+        // Basic CRUD operations
+        getRecipes: async () => {
+            const response = await fetch(`${API_BASE_URL}/recipes`);
+            return response.json();
+        },
+
+        getRecipe: async (id) => {
+            const response = await fetch(`${API_BASE_URL}/recipes/${id}`);
+            return response.json();
+        },
+
+        getIngredients: async () => {
+            const response = await fetch(`${API_BASE_URL}/ingredients`);
+            return response.json();
+        },
+
+        // Auth operations
+        login: async (credentials) => {
+            const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(credentials)
+            });
+            return response.json();
+        },
+
+        register: async (userData) => {
+            const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(userData)
+            });
+            return response.json();
+        },
+        
+        createRecipe: async (recipeData) => {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_BASE_URL}/recipes`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(recipeData)
+            });
+            return response.json();
+        }
     };
 
-    // Components
     function Modal({ isOpen, onClose, title, children }) {
         if (!isOpen) return null;
 
@@ -862,7 +1115,7 @@
         );
     }
 
-    function RecipeCard({ recipe, onClick }) {
+    function RecipeCard({ recipe, onClick, matchDetails, score }) {
         const totalTime = recipe.prep_time_min + recipe.cook_time_min;
 
         return (
@@ -876,6 +1129,9 @@
                     <div className="recipe-meta">
                         <span>⏱️ {totalTime} min</span>
                         <span>👨‍🍳 Prep {recipe.prep_time_min}m</span>
+                        {matchDetails && (
+                            <span>🔥 Match Score: {Math.round(score * 100)}%</span>
+                        )}
                     </div>
                 </div>
             </div>
@@ -924,6 +1180,7 @@
         const [showCreateRecipe, setShowCreateRecipe] = useState(false);
         const [selectedRecipe, setSelectedRecipe] = useState(null);
         const [searchQuery, setSearchQuery] = useState('');
+        const [searchMode, setSearchMode] = useState('text');
 
         useEffect(() => {
             const storedUser = localStorage.getItem('user');
@@ -981,22 +1238,119 @@
             }
         };
 
+        const handleIngredientSearch = async (ingredients, useAdvanced, minScore) => {
+            setLoading(true);
+            try {
+                const data = await api.searchByIngredients(ingredients, useAdvanced, 20, minScore);
+                
+                if (data.advanced_matches) {
+                    const recipesWithMatches = data.advanced_matches.map(match => ({
+                        ...match.recipe,
+                        _matchDetails: match.match_details,
+                        _matchScore: match.overall_score
+                    }));
+                    setRecipes(recipesWithMatches);
+                } else {
+                    setRecipes(data.recipes || []);
+                }
+            } catch (err) {
+                console.error('Ingredient search failed:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        function IngredientSearch({ onSearch, loading }) {
+            const [ingredients, setIngredients] = useState([]);
+            const [inputValue, setInputValue] = useState('');
+            const [useAdvanced, setUseAdvanced] = useState(true);
+            const [minScore, setMinScore] = useState(0.3);
+
+            const addIngredient = (e) => {
+                e.preventDefault();
+                if (inputValue.trim() && !ingredients.includes(inputValue.trim())) {
+                    setIngredients([...ingredients, inputValue.trim()]);
+                    setInputValue('');
+                }
+            };
+
+            const removeIngredient = (ingredient) => {
+                setIngredients(ingredients.filter(ing => ing !== ingredient));
+            };
+
+            const handleSearch = () => {
+                if (ingredients.length > 0) {
+                    onSearch(ingredients, useAdvanced, minScore);
+                }
+            };
+
+            return (
+                <div className="ingredient-search">
+                    <div className="ingredient-input-container">
+                        {ingredients.map((ingredient, index) => (
+                            <div key={index} className="ingredient-tag">
+                                {ingredient}
+                                <button onClick={() => removeIngredient(ingredient)}>×</button>
+                            </div>
+                        ))}
+                        <form onSubmit={addIngredient} style={{ display: 'flex', flex: 1 }}>
+                            <input
+                                type="text"
+                                className="ingredient-input"
+                                placeholder="Add ingredient..."
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                            />
+                        </form>
+                    </div>
+
+                    <div className="search-controls">
+                        <div className="search-options">
+                            <div className="toggle-container">
+                                <span>Advanced Matching</span>
+                                <div 
+                                    className={`toggle ${useAdvanced ? 'active' : ''}`}
+                                    onClick={() => setUseAdvanced(!useAdvanced)}
+                                >
+                                    <div className="toggle-slider"></div>
+                                </div>
+                            </div>
+                            <div className="toggle-container">
+                                <span>Min Score: {Math.round(minScore * 100)}%</span>
+                                <input 
+                                    type="range" 
+                                    min="0" 
+                                    max="100" 
+                                    value={minScore * 100}
+                                    onChange={(e) => setMinScore(e.target.value / 100)}
+                                    style={{ width: '100px' }}
+                                />
+                            </div>
+                        </div>
+                        <button 
+                            className="btn btn-primary" 
+                            onClick={handleSearch}
+                            disabled={ingredients.length === 0 || loading}
+                        >
+                            {loading ? 'Searching...' : 'Find Recipes'}
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
         return (
             <div className="app">
                 <div className="bg-pattern"></div>
 
                 <header className="header">
                     <div className="logo">
-                        <div className="logo-icon">🍳</div>
-                        CookBook
+                        <div className="logo-icon">�</div>
+                        Cooking App
                     </div>
                     <nav className="nav">
                         {user ? (
                             <>
-                                <span className="btn-ghost">Hello, {user.username}!</span>
-                                <button className="btn btn-primary" onClick={() => setShowCreateRecipe(true)}>
-                                    + New Recipe
-                                </button>
                                 <button className="btn btn-secondary" onClick={handleLogout}>
                                     Logout
                                 </button>
@@ -1019,30 +1373,52 @@
                         <h1>Discover & Share<br/>Amazing Recipes</h1>
                         <p>Join our community of home cooks and explore thousands of delicious recipes</p>
 
-                        <form onSubmit={handleSearch} style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', gap: '1rem' }}>
-                            <input
-                                type="text"
-                                className="form-input"
-                                placeholder="Search recipes..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                style={{ flex: 1 }}
+                        <div className="search-tabs">
+                            <div 
+                                className={`search-tab ${searchMode === 'text' ? 'active' : ''}`}
+                                onClick={() => setSearchMode('text')}
+                            >
+                                🔍 Text Search
+                            </div>
+                            <div 
+                                className={`search-tab ${searchMode === 'ingredients' ? 'active' : ''}`}
+                                onClick={() => setSearchMode('ingredients')}
+                            >
+                                🧠 Ingredient Matching
+                            </div>
+                        </div>
+
+                        {searchMode === 'text' ? (
+                            <form onSubmit={handleSearch} style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', gap: '1rem' }}>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    placeholder="Search recipes..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    style={{ flex: 1 }}
+                                />
+                                <button type="submit" className="btn btn-primary">Search</button>
+                            </form>
+                        ) : (
+                            <IngredientSearch 
+                                onSearch={handleIngredientSearch}
+                                loading={loading}
                             />
-                            <button type="submit" className="btn btn-primary">Search</button>
-                        </form>
+                        )}
                     </div>
 
                     {loading ? (
                         <div className="loading">
                             <div className="spinner"></div>
-                            <p>Loading recipes...</p>
+                            <p>{searchMode === 'ingredients' ? 'Finding perfect recipes...' : 'Loading recipes...'}</p>
                         </div>
                     ) : recipes.length === 0 ? (
                         <div className="empty-state">
                             <div className="empty-state-icon">🍽️</div>
-                            <h2>No recipes yet</h2>
-                            <p>Be the first to share a delicious recipe with the community!</p>
-                            {user && (
+                            <h2>{searchMode === 'ingredients' ? 'No recipes found' : 'No recipes yet'}</h2>
+                            <p>{searchMode === 'ingredients' ? 'Try different ingredients or search terms' : 'Be the first to share a delicious recipe with the community!'}</p>
+                            {user && searchMode === 'text' && (
                                 <button className="btn btn-primary" onClick={() => setShowCreateRecipe(true)}>
                                     Create First Recipe
                                 </button>
@@ -1054,6 +1430,8 @@
                                 <RecipeCard
                                     key={recipe.id}
                                     recipe={recipe}
+                                    matchDetails={recipe._matchDetails}
+                                    score={recipe._matchScore}
                                     onClick={() => setSelectedRecipe(recipe)}
                                 />
                             ))}
@@ -1061,7 +1439,6 @@
                     )}
                 </div>
 
-                {/* Auth Modal */}
                 <Modal
                     isOpen={showAuthModal}
                     onClose={() => setShowAuthModal(false)}
@@ -1080,7 +1457,6 @@
                     )}
                 </Modal>
 
-                {/* Create Recipe Modal */}
                 <Modal
                     isOpen={showCreateRecipe}
                     onClose={() => setShowCreateRecipe(false)}
@@ -1092,7 +1468,6 @@
                     />
                 </Modal>
 
-                {/* Recipe Detail Modal */}
                 {selectedRecipe && (
                     <RecipeDetail
                         recipe={selectedRecipe}
