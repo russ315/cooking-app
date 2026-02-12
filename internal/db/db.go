@@ -8,8 +8,6 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-// Open connects to PostgreSQL and returns *sql.DB (thread-safe pool).
-// connURL example: "postgres://user:pass@localhost:5432/cooking?sslmode=disable"
 func Open(connURL string) (*sql.DB, error) {
 	db, err := sql.Open("pgx", connURL)
 	if err != nil {
@@ -22,7 +20,6 @@ func Open(connURL string) (*sql.DB, error) {
 	return db, nil
 }
 
-// Migrate creates tables and seeds initial data if empty.
 func Migrate(db *sql.DB) error {
 	if err := createTables(db); err != nil {
 		return err
@@ -62,6 +59,23 @@ func createTables(db *sql.DB) error {
 			quantity TEXT NOT NULL,
 			PRIMARY KEY (recipe_id, ingredient_id)
 		)`,
+		`CREATE TABLE IF NOT EXISTS ratings (
+			id SERIAL PRIMARY KEY,
+			recipe_id INT NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+			user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			UNIQUE(recipe_id, user_id)
+		)`,
+		`CREATE TABLE IF NOT EXISTS comments (
+			id SERIAL PRIMARY KEY,
+			recipe_id INT NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+			user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			content TEXT NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		)`,
 	}
 	for _, q := range queries {
 		if _, err := db.Exec(q); err != nil {
@@ -69,26 +83,26 @@ func createTables(db *sql.DB) error {
 		}
 	}
 
-	// Add password column if it doesn't exist (for existing databases)
 	if err := addPasswordColumnIfMissing(db); err != nil {
 		return err
 	}
 
-	// Add unique constraints if missing
 	if err := addUniqueConstraintsIfMissing(db); err != nil {
 		return err
 	}
 
-	// Add user_id to recipes if missing (creator ownership)
 	if err := addRecipeUserIDIfMissing(db); err != nil {
 		return err
 	}
 
-	// Create indexes for better performance
 	indexes := []string{
 		`CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)`,
 		`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`,
 		`CREATE INDEX IF NOT EXISTS idx_recipes_name ON recipes(name)`,
+		`CREATE INDEX IF NOT EXISTS idx_ratings_recipe ON ratings(recipe_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_ratings_user ON ratings(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_comments_recipe ON comments(recipe_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_comments_user ON comments(user_id)`,
 	}
 	for _, idx := range indexes {
 		if _, err := db.Exec(idx); err != nil {
@@ -96,11 +110,10 @@ func createTables(db *sql.DB) error {
 		}
 	}
 
-	log.Println("✓ Database tables created/verified")
+	log.Println("✓ Database tables created/verified (including ratings and comments)")
 	return nil
 }
 
-// addPasswordColumnIfMissing adds password column to existing users table
 func addPasswordColumnIfMissing(db *sql.DB) error {
 	var exists bool
 	err := db.QueryRow(`
@@ -143,9 +156,7 @@ func addRecipeUserIDIfMissing(db *sql.DB) error {
 	return nil
 }
 
-// addUniqueConstraintsIfMissing adds unique constraints to username and email
 func addUniqueConstraintsIfMissing(db *sql.DB) error {
-	// Check and add unique constraint on username
 	var usernameUnique bool
 	err := db.QueryRow(`
 		SELECT EXISTS (
@@ -159,7 +170,6 @@ func addUniqueConstraintsIfMissing(db *sql.DB) error {
 		}
 	}
 
-	// Check and add unique constraint on email
 	var emailUnique bool
 	err = db.QueryRow(`
 		SELECT EXISTS (
@@ -207,7 +217,6 @@ func seedIfEmpty(db *sql.DB) error {
 		}
 	}
 
-	// Seed sample recipes with recipe_ingredients
 	type recIng struct {
 		ingID int
 		qty   string
