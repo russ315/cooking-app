@@ -10,21 +10,21 @@ import (
 
 // IngredientMatcher provides advanced ingredient matching capabilities
 type IngredientMatcher struct {
-	repo       RecipeRepository
-	synonyms   map[string][]string // ingredient name -> list of synonyms
-	aliases    map[string]string   // alias -> canonical name
+	repo        RecipeRepository
+	synonyms    map[string][]string // ingredient name -> list of synonyms
+	aliases     map[string]string   // alias -> canonical name
 	substitutes map[string][]string // ingredient -> possible substitutes
 }
 
 // NewIngredientMatcher creates a new ingredient matcher with predefined data
 func NewIngredientMatcher(repo RecipeRepository) *IngredientMatcher {
 	im := &IngredientMatcher{
-		repo:       repo,
-		synonyms:   make(map[string][]string),
-		aliases:    make(map[string]string),
+		repo:        repo,
+		synonyms:    make(map[string][]string),
+		aliases:     make(map[string]string),
 		substitutes: make(map[string][]string),
 	}
-	
+
 	// Initialize ingredient synonyms and aliases
 	im.initializeIngredientData()
 	return im
@@ -34,67 +34,67 @@ func NewIngredientMatcher(repo RecipeRepository) *IngredientMatcher {
 func (im *IngredientMatcher) initializeIngredientData() {
 	// Common cooking ingredient synonyms
 	synonymData := map[string][]string{
-		"egg":         {"eggs"},
-		"flour":       {"all-purpose flour", "plain flour", "white flour", "wheat flour"},
-		"sugar":       {"white sugar", "granulated sugar", "table sugar"},
-		"butter":      {"unsalted butter", "salted butter"},
-		"milk":        {"whole milk", "cow milk", "dairy milk"},
-		"onion":       {"yellow onion", "white onion", "red onion"},
-		"garlic":      {"garlic clove", "garlic cloves"},
-		"tomato":      {"tomatoes", "fresh tomato", "ripe tomato"},
-		"potato":      {"potatoes", "russet potato", "red potato"},
-		"carrot":      {"carrots", "baby carrot"},
-		"chicken":     {"chicken breast", "chicken thigh", "chicken meat"},
-		"beef":        {"ground beef", "beef meat", "steak"},
-		"rice":        {"white rice", "brown rice", "jasmine rice"},
-		"pasta":       {"spaghetti", "penne", "macaroni"},
-		"cheese":      {"cheddar", "mozzarella", "parmesan"},
-		"olive oil":   {"extra virgin olive oil", "olive oil"},
-		"salt":        {"table salt", "sea salt"},
-		"pepper":      {"black pepper", "ground pepper"},
+		"egg":       {"eggs"},
+		"flour":     {"all-purpose flour", "plain flour", "white flour", "wheat flour"},
+		"sugar":     {"white sugar", "granulated sugar", "table sugar"},
+		"butter":    {"unsalted butter", "salted butter"},
+		"milk":      {"whole milk", "cow milk", "dairy milk"},
+		"onion":     {"yellow onion", "white onion", "red onion"},
+		"garlic":    {"garlic clove", "garlic cloves"},
+		"tomato":    {"tomatoes", "fresh tomato", "ripe tomato"},
+		"potato":    {"potatoes", "russet potato", "red potato"},
+		"carrot":    {"carrots", "baby carrot"},
+		"chicken":   {"chicken breast", "chicken thigh", "chicken meat"},
+		"beef":      {"ground beef", "beef meat", "steak"},
+		"rice":      {"white rice", "brown rice", "jasmine rice"},
+		"pasta":     {"spaghetti", "penne", "macaroni"},
+		"cheese":    {"cheddar", "mozzarella", "parmesan"},
+		"olive oil": {"extra virgin olive oil", "olive oil"},
+		"salt":      {"table salt", "sea salt"},
+		"pepper":    {"black pepper", "ground pepper"},
 	}
 
 	// Common aliases (alternative names)
 	aliasData := map[string]string{
-		"eggs":         "egg",
-		"tomatoes":     "tomato",
-		"potatoes":     "potato",
-		"carrots":      "carrot",
-		"onions":       "onion",
-		"garlic cloves": "garlic",
+		"eggs":           "egg",
+		"tomatoes":       "tomato",
+		"potatoes":       "potato",
+		"carrots":        "carrot",
+		"onions":         "onion",
+		"garlic cloves":  "garlic",
 		"chicken breast": "chicken",
-		"ground beef":  "beef",
-		"spaghetti":    "pasta",
-		"cheddar":      "cheese",
-		"mozzarella":   "cheese",
-		"parmesan":     "cheese",
-		"black pepper": "pepper",
-		"sea salt":     "salt",
-		"table salt":   "salt",
+		"ground beef":    "beef",
+		"spaghetti":      "pasta",
+		"cheddar":        "cheese",
+		"mozzarella":     "cheese",
+		"parmesan":       "cheese",
+		"black pepper":   "pepper",
+		"sea salt":       "salt",
+		"table salt":     "salt",
 	}
 
 	// Common substitutes
 	substituteData := map[string][]string{
-		"egg":         {"flax egg", "chia egg", "apple sauce", "banana"},
-		"butter":      {"margarine", "coconut oil", "vegetable oil", "apple sauce"},
-		"sugar":       {"honey", "maple syrup", "agave nectar", "stevia"},
-		"milk":        {"almond milk", "soy milk", "oat milk", "coconut milk"},
-		"flour":       {"almond flour", "coconut flour", "oat flour", "rice flour"},
-		"sour cream":  {"yogurt", "buttermilk", "cream cheese"},
-		"mayonnaise":  {"greek yogurt", "avocado", "hummus"},
-		"rice":        {"quinoa", "couscous", "cauliflower rice"},
-		"pasta":       {"zucchini noodles", "spaghetti squash", "rice noodles"},
+		"egg":        {"flax egg", "chia egg", "apple sauce", "banana"},
+		"butter":     {"margarine", "coconut oil", "vegetable oil", "apple sauce"},
+		"sugar":      {"honey", "maple syrup", "agave nectar", "stevia"},
+		"milk":       {"almond milk", "soy milk", "oat milk", "coconut milk"},
+		"flour":      {"almond flour", "coconut flour", "oat flour", "rice flour"},
+		"sour cream": {"yogurt", "buttermilk", "cream cheese"},
+		"mayonnaise": {"greek yogurt", "avocado", "hummus"},
+		"rice":       {"quinoa", "couscous", "cauliflower rice"},
+		"pasta":      {"zucchini noodles", "spaghetti squash", "rice noodles"},
 	}
 
 	// Load the data into maps
 	for canonical, synonyms := range synonymData {
 		im.synonyms[canonical] = synonyms
 	}
-	
+
 	for alias, canonical := range aliasData {
 		im.aliases[alias] = canonical
 	}
-	
+
 	for ingredient, substitutes := range substituteData {
 		im.substitutes[ingredient] = substitutes
 	}
@@ -103,12 +103,12 @@ func (im *IngredientMatcher) initializeIngredientData() {
 // normalizeIngredientName returns the canonical form of an ingredient name
 func (im *IngredientMatcher) normalizeIngredientName(name string) string {
 	name = strings.ToLower(strings.TrimSpace(name))
-	
+
 	// Check if it's an alias
 	if canonical, exists := im.aliases[name]; exists {
 		return canonical
 	}
-	
+
 	// Check if it matches any synonym
 	for canonical, synonyms := range im.synonyms {
 		for _, synonym := range synonyms {
@@ -117,7 +117,7 @@ func (im *IngredientMatcher) normalizeIngredientName(name string) string {
 			}
 		}
 	}
-	
+
 	return name
 }
 
@@ -157,12 +157,12 @@ func (im *IngredientMatcher) levenshteinDistance(a, b string) int {
 // similarityScore calculates a similarity score between two ingredient names (0-1)
 func (im *IngredientMatcher) similarityScore(a, b string) float64 {
 	a, b = strings.ToLower(a), strings.ToLower(b)
-	
+
 	// Exact match
 	if a == b {
 		return 1.0
 	}
-	
+
 	// Check if one contains the other
 	if strings.Contains(a, b) || strings.Contains(b, a) {
 		shorter, longer := a, b
@@ -171,34 +171,34 @@ func (im *IngredientMatcher) similarityScore(a, b string) float64 {
 		}
 		return float64(len(shorter)) / float64(len(longer))
 	}
-	
+
 	// Levenshtein distance similarity
 	maxLen := math.Max(float64(len(a)), float64(len(b)))
 	if maxLen == 0 {
 		return 1.0
 	}
-	
+
 	distance := float64(im.levenshteinDistance(a, b))
 	similarity := 1.0 - (distance / maxLen)
-	
+
 	return math.Max(0, similarity)
 }
 
 // MatchResult represents a single ingredient match with its score
 type MatchResult struct {
-	Ingredient   string  `json:"ingredient"`
-	Score        float64 `json:"score"`
-	MatchType    string  `json:"match_type"` // "exact", "synonym", "fuzzy", "substitute"
-	Original     string  `json:"original"`
+	Ingredient string  `json:"ingredient"`
+	Score      float64 `json:"score"`
+	MatchType  string  `json:"match_type"` // "exact", "synonym", "fuzzy", "substitute"
+	Original   string  `json:"original"`
 }
 
 // RecipeMatchResult represents a recipe with its overall match score and details
 type RecipeMatchResult struct {
-	Recipe       *models.Recipe  `json:"recipe"`
-	OverallScore float64         `json:"overall_score"`
-	MatchDetails []MatchResult   `json:"match_details"`
-	MissingCount int             `json:"missing_count"`
-	ExtraCount   int             `json:"extra_count"`
+	Recipe       *models.Recipe `json:"recipe"`
+	OverallScore float64        `json:"overall_score"`
+	MatchDetails []MatchResult  `json:"match_details"`
+	MissingCount int            `json:"missing_count"`
+	ExtraCount   int            `json:"extra_count"`
 }
 
 // MatchIngredients performs advanced ingredient matching against all recipes
@@ -211,22 +211,22 @@ func (im *IngredientMatcher) MatchIngredients(userIngredients []string, maxResul
 			normalizedUser[normalized] = true
 		}
 	}
-	
+
 	if len(normalizedUser) == 0 {
 		return []RecipeMatchResult{}
 	}
-	
+
 	// Get all recipes
 	recipes := im.repo.GetAll()
 	var results []RecipeMatchResult
-	
+
 	for _, recipe := range recipes {
 		matchResult := im.calculateRecipeMatch(recipe, normalizedUser, userIngredients)
 		if matchResult.OverallScore > 0 {
 			results = append(results, matchResult)
 		}
 	}
-	
+
 	// Sort by overall score (descending)
 	for i := 0; i < len(results)-1; i++ {
 		for j := i + 1; j < len(results); j++ {
@@ -235,12 +235,12 @@ func (im *IngredientMatcher) MatchIngredients(userIngredients []string, maxResul
 			}
 		}
 	}
-	
+
 	// Limit results
 	if maxResults > 0 && len(results) > maxResults {
 		results = results[:maxResults]
 	}
-	
+
 	return results
 }
 
@@ -248,44 +248,65 @@ func (im *IngredientMatcher) MatchIngredients(userIngredients []string, maxResul
 func (im *IngredientMatcher) calculateRecipeMatch(recipe *models.Recipe, userIngredients map[string]bool, originalUserIngredients []string) RecipeMatchResult {
 	var matchDetails []MatchResult
 	matchedIngredients := make(map[string]bool)
-	
+
 	// Match each recipe ingredient against user ingredients
 	for _, recipeIng := range recipe.Ingredients {
 		recipeIngName := im.normalizeIngredientName(recipeIng.Ingredient.Name)
+
+		// Use original user ingredients for findBestMatch (it will normalize internally)
 		bestMatch := im.findBestMatch(recipeIngName, originalUserIngredients)
-		
 		if bestMatch.Score > 0.3 { // Threshold for considering it a match
 			matchDetails = append(matchDetails, bestMatch)
 			matchedIngredients[recipeIngName] = true
 		}
 	}
-	
-	// Calculate scores
+
+	// Calculate basic counts
 	totalRecipeIngredients := len(recipe.Ingredients)
 	matchedCount := len(matchedIngredients)
 	missingCount := totalRecipeIngredients - matchedCount
-	
+
+	// Skip recipes with no ingredients
+	if totalRecipeIngredients == 0 {
+		return RecipeMatchResult{
+			Recipe:       recipe,
+			OverallScore: 0,
+			MatchDetails: matchDetails,
+			MissingCount: 0,
+			ExtraCount:   0,
+		}
+	}
+
 	// Extra ingredients (user has but recipe doesn't need)
+	// Use normalized user ingredient count so duplicates don't over-penalize
 	extraCount := len(userIngredients) - matchedCount
 	if extraCount < 0 {
 		extraCount = 0
 	}
-	
+
 	// Overall score calculation
-	// Base score: percentage of ingredients matched
-	baseScore := float64(matchedCount) / float64(totalRecipeIngredients)
-	
-	// Penalty for missing ingredients
-	missingPenalty := float64(missingCount) * 0.2
-	
-	// Small penalty for extra ingredients (but less severe)
-	extraPenalty := float64(extraCount) * 0.05
-	
-	overallScore := baseScore - missingPenalty - extraPenalty
+	// We blend two coverage scores:
+	//  - how much of the RECIPE the user can make (coverageRecipe)
+	//  - how much of the USER'S pantry is used by the recipe (coverageUser)
+	//
+	// This makes recipes that fully use the user's few ingredients score well,
+	// even if the recipe has many more ingredients, while still preferring
+	// recipes where a larger fraction of ingredients match.
+	coverageRecipe := float64(matchedCount) / float64(totalRecipeIngredients) // 0..1
+
+	coverageUser := 0.0
+	if len(userIngredients) > 0 {
+		coverageUser = float64(matchedCount) / float64(len(userIngredients)) // 0..1
+	}
+
+	// Weight recipe coverage a bit more than user coverage
+	overallScore := 0.7*coverageRecipe + 0.3*coverageUser
 	if overallScore < 0 {
 		overallScore = 0
+	} else if overallScore > 1 {
+		overallScore = 1
 	}
-	
+
 	return RecipeMatchResult{
 		Recipe:       recipe,
 		OverallScore: overallScore,
@@ -297,11 +318,13 @@ func (im *IngredientMatcher) calculateRecipeMatch(recipe *models.Recipe, userIng
 
 // findBestMatch finds the best matching user ingredient for a recipe ingredient
 func (im *IngredientMatcher) findBestMatch(recipeIngredient string, userIngredients []string) MatchResult {
-	var bestMatch MatchResult
-	
+	bestMatch := MatchResult{
+		Score: 0, // Initialize with 0 score
+	}
+
 	for _, userIng := range userIngredients {
 		normalizedUser := im.normalizeIngredientName(userIng)
-		
+
 		// Check exact match
 		if normalizedUser == recipeIngredient {
 			return MatchResult{
@@ -311,7 +334,7 @@ func (im *IngredientMatcher) findBestMatch(recipeIngredient string, userIngredie
 				Original:   userIng,
 			}
 		}
-		
+
 		// Check synonym match
 		if im.isSynonym(normalizedUser, recipeIngredient) {
 			return MatchResult{
@@ -321,7 +344,7 @@ func (im *IngredientMatcher) findBestMatch(recipeIngredient string, userIngredie
 				Original:   userIng,
 			}
 		}
-		
+
 		// Check substitute match
 		if im.isSubstitute(normalizedUser, recipeIngredient) {
 			score := 0.7
@@ -334,7 +357,7 @@ func (im *IngredientMatcher) findBestMatch(recipeIngredient string, userIngredie
 				}
 			}
 		}
-		
+
 		// Check fuzzy match
 		similarity := im.similarityScore(normalizedUser, recipeIngredient)
 		if similarity > 0.6 && similarity > bestMatch.Score {
@@ -346,8 +369,16 @@ func (im *IngredientMatcher) findBestMatch(recipeIngredient string, userIngredie
 			}
 		}
 	}
-	
-	return bestMatch
+
+	// Only return if we found a match (score > 0)
+	if bestMatch.Score > 0 {
+		return bestMatch
+	}
+
+	// Return empty match with zero score if nothing found
+	return MatchResult{
+		Score: 0,
+	}
 }
 
 // isSynonym checks if two ingredients are synonyms
@@ -360,7 +391,7 @@ func (im *IngredientMatcher) isSynonym(a, b string) bool {
 			}
 		}
 	}
-	
+
 	if synonyms, exists := im.synonyms[b]; exists {
 		for _, synonym := range synonyms {
 			if synonym == a {
@@ -368,7 +399,7 @@ func (im *IngredientMatcher) isSynonym(a, b string) bool {
 			}
 		}
 	}
-	
+
 	return false
 }
 
@@ -381,7 +412,7 @@ func (im *IngredientMatcher) isSubstitute(a, b string) bool {
 			}
 		}
 	}
-	
+
 	if substitutes, exists := im.substitutes[b]; exists {
 		for _, sub := range substitutes {
 			if sub == a {
@@ -389,7 +420,7 @@ func (im *IngredientMatcher) isSubstitute(a, b string) bool {
 			}
 		}
 	}
-	
+
 	return false
 }
 
@@ -415,22 +446,22 @@ func (im *IngredientMatcher) GetSynonyms(ingredient string) []string {
 func (im *IngredientMatcher) AddSynonym(canonical, synonym string) {
 	canonical = im.normalizeIngredientName(canonical)
 	synonym = im.normalizeIngredientName(synonym)
-	
+
 	if canonical == "" || synonym == "" {
 		return
 	}
-	
+
 	if im.synonyms[canonical] == nil {
 		im.synonyms[canonical] = []string{}
 	}
-	
+
 	// Check if synonym already exists
 	for _, existing := range im.synonyms[canonical] {
 		if existing == synonym {
 			return
 		}
 	}
-	
+
 	im.synonyms[canonical] = append(im.synonyms[canonical], synonym)
 	im.aliases[synonym] = canonical
 }
@@ -439,22 +470,22 @@ func (im *IngredientMatcher) AddSynonym(canonical, synonym string) {
 func (im *IngredientMatcher) AddSubstitute(ingredient, substitute string) {
 	ingredient = im.normalizeIngredientName(ingredient)
 	substitute = im.normalizeIngredientName(substitute)
-	
+
 	if ingredient == "" || substitute == "" {
 		return
 	}
-	
+
 	if im.substitutes[ingredient] == nil {
 		im.substitutes[ingredient] = []string{}
 	}
-	
+
 	// Check if substitute already exists
 	for _, existing := range im.substitutes[ingredient] {
 		if existing == substitute {
 			return
 		}
 	}
-	
+
 	im.substitutes[ingredient] = append(im.substitutes[ingredient], substitute)
 }
 
@@ -462,7 +493,7 @@ func (im *IngredientMatcher) AddSubstitute(ingredient, substitute string) {
 func (im *IngredientMatcher) tokenize(text string) []string {
 	var words []string
 	var current strings.Builder
-	
+
 	for _, r := range text {
 		if unicode.IsLetter(r) || unicode.IsNumber(r) {
 			current.WriteRune(r)
@@ -473,10 +504,10 @@ func (im *IngredientMatcher) tokenize(text string) []string {
 			}
 		}
 	}
-	
+
 	if current.Len() > 0 {
 		words = append(words, strings.ToLower(current.String()))
 	}
-	
+
 	return words
 }
