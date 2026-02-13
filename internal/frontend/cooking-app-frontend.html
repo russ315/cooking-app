@@ -1881,14 +1881,15 @@
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button 
+                            type="submit"
                             className="btn btn-primary" 
                             onClick={handleSearch}
-                            
                         >
                             {loading ? 'Searching...' : 'Find Recipes'}
                         </button>
                         {ingredients.length > 0 && (
                             <button 
+                                type="button"
                                 className="btn clear-search"
                                 onClick={handleClear}
                                 disabled={loading}
@@ -1999,16 +2000,19 @@
             setIsSearchActive(true);
             try {
                 const data = await api.searchByIngredients(ingredients, useAdvanced, 20, minScore);
-                console.log('API response:', data);
-                
-                if (data && data.advanced_matches && data.advanced_matches.length > 0) {
+                if (!data) {
+                    setRecipes([]);
+                    return;
+                }
+                // Prefer advanced_matches when present (scores and match details)
+                if (data.advanced_matches && data.advanced_matches.length > 0) {
                     const recipesWithMatches = data.advanced_matches.map(match => ({
                         ...match.recipe,
                         _matchDetails: match.match_details,
                         _matchScore: match.overall_score
                     }));
                     setRecipes(recipesWithMatches);
-                } else if (data && data.recipes && data.recipes.length > 0) {
+                } else if (data.recipes && data.recipes.length > 0) {
                     setRecipes(data.recipes);
                 } else {
                     setRecipes([]);
