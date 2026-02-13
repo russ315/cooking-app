@@ -24,17 +24,22 @@ func (m *CORSMiddleware) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Set CORS headers
 		origin := r.Header.Get("Origin")
+		allowCredentials := false
 		if origin == "" || m.isAllowedOrigin(origin) {
 			if len(m.allowedOrigins) == 1 && m.allowedOrigins[0] == "*" {
 				w.Header().Set("Access-Control-Allow-Origin", "*")
 			} else if origin != "" {
 				w.Header().Set("Access-Control-Allow-Origin", origin)
+				allowCredentials = true
 			}
 		}
 
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		// Only set Credentials header when not using wildcard origin (CORS spec requirement)
+		if allowCredentials {
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+		}
 		w.Header().Set("Access-Control-Max-Age", "86400") // 24 hours
 
 		// Handle preflight requests

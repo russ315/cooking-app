@@ -103,12 +103,12 @@ func GetUserID(r *http.Request) (int, bool) {
 	return id, ok
 }
 
-// MustGetUserID panics or returns error variant if no user (for handlers that require auth)
+// MustGetUserID returns the user ID or 0 if not authenticated.
+// Callers should only use this in handlers that require auth (protected by middleware).
 func MustGetUserID(r *http.Request) int {
 	id, ok := GetUserID(r)
 	if !ok {
-		panic("MustGetUserID called without authenticated user")
-		// or return error / use custom error type in real apps
+		return 0 // This should not happen in protected routes due to middleware check
 	}
 	return id
 }

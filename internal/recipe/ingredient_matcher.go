@@ -221,6 +221,11 @@ func (im *IngredientMatcher) MatchIngredients(userIngredients []string, maxResul
 	var results []RecipeMatchResult
 	
 	for _, recipe := range recipes {
+		// Skip recipes with no ingredients
+		if recipe.Ingredients == nil || len(recipe.Ingredients) == 0 {
+			continue
+		}
+		
 		matchResult := im.calculateRecipeMatch(recipe, normalizedUser, userIngredients)
 		if matchResult.OverallScore > 0 {
 			results = append(results, matchResult)
@@ -247,7 +252,8 @@ func (im *IngredientMatcher) MatchIngredients(userIngredients []string, maxResul
 // calculateRecipeMatch calculates how well a recipe matches the user's ingredients
 func (im *IngredientMatcher) calculateRecipeMatch(recipe *models.Recipe, userIngredients map[string]bool, originalUserIngredients []string) RecipeMatchResult {
 	var matchDetails []MatchResult
-	matchedIngredients := make(map[string]bool)
+	matchedRecipeIngredients := make(map[string]bool)
+	matchedUserIngredients := make(map[string]bool)
 	
 	// Match each recipe ingredient against user ingredients
 	for _, recipeIng := range recipe.Ingredients {
@@ -256,24 +262,29 @@ func (im *IngredientMatcher) calculateRecipeMatch(recipe *models.Recipe, userIng
 		
 		if bestMatch.Score > 0.3 { // Threshold for considering it a match
 			matchDetails = append(matchDetails, bestMatch)
-			matchedIngredients[recipeIngName] = true
+			matchedRecipeIngredients[recipeIngName] = true
+			// Track the original ingredient that matched
+			matchedUserIngredients[bestMatch.Original] = true
 		}
 	}
 	
 	// Calculate scores
 	totalRecipeIngredients := len(recipe.Ingredients)
-	matchedCount := len(matchedIngredients)
-	missingCount := totalRecipeIngredients - matchedCount
+	matchedRecipeCount := len(matchedRecipeIngredients)
+	missingCount := totalRecipeIngredients - matchedRecipeCount
 	
 	// Extra ingredients (user has but recipe doesn't need)
-	extraCount := len(userIngredients) - matchedCount
-	if extraCount < 0 {
-		extraCount = 0
+	// Count user ingredients that weren't matched to any recipe ingredient
+	extraCount := 0
+	for _, userIng := range originalUserIngredients {
+		if !matchedUserIngredients[userIng] {
+			extraCount++
+		}
 	}
 	
 	// Overall score calculation
 	// Base score: percentage of ingredients matched
-	baseScore := float64(matchedCount) / float64(totalRecipeIngredients)
+	baseScore := float64(matchedRecipeCount) / float64(totalRecipeIngredients)
 	
 	// Penalty for missing ingredients
 	missingPenalty := float64(missingCount) * 0.2

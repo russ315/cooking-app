@@ -197,6 +197,11 @@ func (s *EnhancedSearchService) ComprehensiveSearch(req SearchRequest) SearchRes
 		// Advanced ingredient matching
 		matches := s.AdvancedIngredientSearch(req.Ingredients, req.MaxResults)
 		
+		// Initialize as empty slice to ensure it's present in JSON
+		if matches == nil {
+			matches = []RecipeMatchResult{}
+		}
+		
 		// Filter by minimum score if specified
 		if req.MinMatchScore > 0 {
 			filtered := make([]RecipeMatchResult, 0)

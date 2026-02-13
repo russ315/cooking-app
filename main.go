@@ -1,5 +1,3 @@
-// Package main is the entry point for Assignment 4.
-// Run from project root: go run .
 package main
 
 import (
@@ -23,10 +21,10 @@ func main() {
 	fmt.Println("===========================================")
 	fmt.Println("Cooking App - With Authentication + CORS")
 	fmt.Println("Recipe Search + User Profiles + Auth (JWT)")
+	fmt.Println("+ Ratings & Comments System")
 	fmt.Println("===========================================")
 	fmt.Println()
 
-	// Database connection
 	connURL := os.Getenv("DATABASE_URL")
 	if connURL == "" {
 		connURL = "postgres://postgres:postgres@localhost:5432/cooking?sslmode=disable"
@@ -44,12 +42,13 @@ func main() {
 	}
 	defer database.Close()
 
-	// Run migrations
+	activityLogger := logger.NewActivityLogger()
+	defer activityLogger.Close()
+
 	if err := db.Migrate(database); err != nil {
 		log.Fatal("Database migrate failed:", err)
 	}
 
-	// Initialize services
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		jwtSecret = "default-secret-change-in-production"
@@ -58,76 +57,80 @@ func main() {
 
 	userRepo := repository.NewUserRepository(database)
 	recipeRepo := repository.NewRecipeRepository(database)
-	activityLogger := logger.NewActivityLogger()
+	ratingRepo := repository.NewRatingRepository(database)
 	searchService := recipe.NewSearchService(recipeRepo)
 	enhancedSearchService := recipe.NewEnhancedSearchService(recipeRepo)
 	authService := auth.NewService(jwtSecret)
 
-	// Initialize handlers
 	authHandler := handler.NewAuthHandler(userRepo, authService)
 	userHandler := handler.NewUserHandler(userRepo, activityLogger)
 	recipeHandler := handler.NewRecipeHandler(recipeRepo, searchService, enhancedSearchService, activityLogger)
+	ratingHandler := handler.NewRatingHandler(ratingRepo, activityLogger)
 
-	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(authService)
 	corsMiddleware := middleware.NewCORSMiddleware([]string{"*"}) // Allow all origins (change in production)
 
-	// Setup router
 	router := mux.NewRouter()
 
-	// Apply CORS middleware to all routes
 	router.Use(corsMiddleware.Handler)
 
-	// Health check
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	}).Methods("GET")
 
-	// Public auth routes
 	router.HandleFunc("/api/auth/register", authHandler.Register).Methods("POST")
 	router.HandleFunc("/api/auth/login", authHandler.Login).Methods("POST")
 
-	// Public profile routes (can view profiles without auth)
 	router.HandleFunc("/api/profiles", userHandler.GetAllProfiles).Methods("GET")
 	router.HandleFunc("/api/profile/{id:[0-9]+}", userHandler.GetProfile).Methods("GET")
 
-	// Protected profile routes (require authentication)
 	protectedProfile := router.PathPrefix("/api/profile").Subrouter()
 	protectedProfile.Use(authMiddleware.Authenticate)
 	protectedProfile.HandleFunc("", userHandler.CreateProfile).Methods("POST")
 	protectedProfile.HandleFunc("/{id:[0-9]+}", userHandler.UpdateProfile).Methods("PUT")
 	protectedProfile.HandleFunc("/{id:[0-9]+}", userHandler.DeleteProfile).Methods("DELETE")
 
-	// Recipe routes (public read, protected write)
 	router.HandleFunc("/api/recipes", recipeHandler.ListRecipes).Methods("GET")
 	router.HandleFunc("/api/recipes/{id:[0-9]+}", recipeHandler.GetRecipe).Methods("GET")
 	router.HandleFunc("/api/ingredients", recipeHandler.ListIngredients).Methods("GET")
 
-	// Enhanced ingredient matching routes (public)
+	// Register all public endpoints BEFORE subrouters to ensure they take priority
 	router.HandleFunc("/api/recipes/search/advanced", recipeHandler.AdvancedIngredientSearch).Methods("POST")
 	router.HandleFunc("/api/ingredients/{name}/substitutes", recipeHandler.GetIngredientSubstitutes).Methods("GET")
 	router.HandleFunc("/api/ingredients/{name}/synonyms", recipeHandler.GetIngredientSynonyms).Methods("GET")
 
-	// Protected recipe routes
+	router.HandleFunc("/api/recipes/{id:[0-9]+}/ratings", ratingHandler.GetRatingsByRecipe).Methods("GET")
+	router.HandleFunc("/api/recipes/{id:[0-9]+}/rating-stats", ratingHandler.GetRatingStats).Methods("GET")
+	router.HandleFunc("/api/recipes/{id:[0-9]+}/comments", ratingHandler.GetCommentsByRecipe).Methods("GET")
+
+	// Protected recipe routes (Create, Update, Delete)
 	protectedRecipes := router.PathPrefix("/api/recipes").Subrouter()
 	protectedRecipes.Use(authMiddleware.Authenticate)
 	protectedRecipes.HandleFunc("", recipeHandler.CreateRecipe).Methods("POST")
 	protectedRecipes.HandleFunc("/{id:[0-9]+}", recipeHandler.UpdateRecipe).Methods("PUT")
 	protectedRecipes.HandleFunc("/{id:[0-9]+}", recipeHandler.DeleteRecipe).Methods("DELETE")
 
-	// Protected ingredient management routes
+	protectedRecipes.HandleFunc("/{id:[0-9]+}/ratings", ratingHandler.CreateOrUpdateRating).Methods("POST")
+	protectedRecipes.HandleFunc("/{id:[0-9]+}/my-rating", ratingHandler.GetUserRatingForRecipe).Methods("GET")
+	protectedRecipes.HandleFunc("/{id:[0-9]+}/comments", ratingHandler.CreateComment).Methods("POST")
+
+	// Protected ingredient routes
 	protectedIngredients := router.PathPrefix("/api/ingredients").Subrouter()
 	protectedIngredients.Use(authMiddleware.Authenticate)
 	protectedIngredients.HandleFunc("/synonyms", recipeHandler.AddIngredientSynonym).Methods("POST")
 	protectedIngredients.HandleFunc("/substitutes", recipeHandler.AddIngredientSubstitute).Methods("POST")
 
-	// Frontend: serve React single-page app for all non-API routes
+	protectedComments := router.PathPrefix("/api/comments").Subrouter()
+	protectedComments.Use(authMiddleware.Authenticate)
+	protectedComments.HandleFunc("/{id:[0-9]+}", ratingHandler.UpdateComment).Methods("PUT")
+	protectedComments.HandleFunc("/{id:[0-9]+}", ratingHandler.DeleteComment).Methods("DELETE")
+
 	frontendFS := http.FileServer(http.Dir("./internal/frontend"))
 	router.PathPrefix("/").Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Route to different pages based on path
+
 		if r.URL.Path == "/" || r.URL.Path == "/index.html" {
-			r.URL.Path = "/cooking-app-frontend.html" // Main app with login/register
+			r.URL.Path = "/cooking-app-frontend.html"
 		}
 		frontendFS.ServeHTTP(w, r)
 	}))
@@ -146,6 +149,9 @@ func main() {
 	fmt.Println("    POST   /api/recipes/search/advanced - Advanced ingredient matching")
 	fmt.Println("    GET    /api/ingredients/{name}/substitutes - Get ingredient substitutes")
 	fmt.Println("    GET    /api/ingredients/{name}/synonyms     - Get ingredient synonyms")
+	fmt.Println("    GET    /api/recipes/{id}/ratings           - Get all ratings for recipe")
+	fmt.Println("    GET    /api/recipes/{id}/rating-stats      - Get rating statistics")
+	fmt.Println("    GET    /api/recipes/{id}/comments          - Get all comments for recipe")
 	fmt.Println()
 	fmt.Println("  PROTECTED (require Authorization: Bearer <token>):")
 	fmt.Println("    POST   /api/profile                 - Create profile")
@@ -156,9 +162,15 @@ func main() {
 	fmt.Println("    DELETE /api/recipes/{id}            - Delete recipe")
 	fmt.Println("    POST   /api/ingredients/synonyms    - Add ingredient synonym")
 	fmt.Println("    POST   /api/ingredients/substitutes - Add ingredient substitute")
+	fmt.Println("    POST   /api/recipes/{id}/ratings    - Create/update rating")
+	fmt.Println("    GET    /api/recipes/{id}/my-rating  - Get your rating for recipe")
+	fmt.Println("    POST   /api/recipes/{id}/comments   - Create comment")
+	fmt.Println("    PUT    /api/comments/{id}           - Update comment")
+	fmt.Println("    DELETE /api/comments/{id}           - Delete comment")
 	fmt.Println()
 	fmt.Println("  🌐 CORS enabled for all origins")
 	fmt.Println("  🧠 Enhanced ingredient matching with fuzzy search, synonyms, and substitutes")
+	fmt.Println("  ⭐ Recipe Rating & Comments System")
 	fmt.Println()
 
 	port := "8080"

@@ -748,6 +748,149 @@
             background: #C36550;
         }
 
+        .rating-section {
+            background: rgba(156, 175, 136, 0.08);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .rating-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .rating-display {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .rating-stars {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .star {
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .star:hover,
+        .star.filled {
+            color: var(--gold);
+            transform: scale(1.1);
+        }
+
+        .star.empty {
+            color: rgba(0, 0, 0, 0.2);
+        }
+
+        .rating-info {
+            text-align: center;
+        }
+
+        .rating-average {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--forest);
+        }
+
+        .rating-count {
+            font-size: 0.9rem;
+            color: var(--charcoal);
+            opacity: 0.6;
+        }
+
+        .rating-breakdown {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .breakdown-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .breakdown-bar {
+            flex: 1;
+            height: 8px;
+            background: rgba(156, 175, 136, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .breakdown-bar-fill {
+            height: 100%;
+            background: var(--sage);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .your-rating {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(156, 175, 136, 0.2);
+        }
+
+        .your-rating h4 {
+            color: var(--forest);
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .rating-input {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .rating-input .star {
+            font-size: 2rem;
+        }
+
+        .comments-section {
+            margin-top: 2rem;
+        }
+
+        .comment-item {
+            background: white;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--sage);
+        }
+
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .comment-author {
+            font-weight: 600;
+            color: var(--forest);
+        }
+
+        .comment-time {
+            font-size: 0.85rem;
+            color: var(--charcoal);
+            opacity: 0.6;
+        }
+
+        .comment-content {
+            color: var(--charcoal);
+            line-height: 1.6;
+        }
+
         @media (max-width: 768px) {
             .hero h1 {
                 font-size: 2.5rem;
@@ -922,6 +1065,66 @@
                 const text = await response.text();
                 throw new Error(text || `Delete failed (${response.status})`);
             }
+        },
+
+        getRatingStats: async (recipeID) => {
+            const response = await fetch(`${API_BASE_URL}/recipes/${recipeID}/rating-stats`);
+            return handleResponse(response);
+        },
+
+        getRatings: async (recipeID) => {
+            const response = await fetch(`${API_BASE_URL}/recipes/${recipeID}/ratings`);
+            const data = await handleResponse(response);
+            return Array.isArray(data) ? data : [];
+        },
+
+        createOrUpdateRating: async (recipeID, rating) => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                throw new Error('You must be logged in to rate this recipe');
+            }
+            const response = await fetch(`${API_BASE_URL}/recipes/${recipeID}/ratings`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ rating })
+            });
+            return handleResponse(response);
+        },
+
+        getUserRating: async (recipeID) => {
+            const token = localStorage.getItem('token');
+            if (!token) return null;
+            const response = await fetch(`${API_BASE_URL}/recipes/${recipeID}/my-rating`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) return null;
+            const data = await handleResponse(response);
+            return data && data.rating ? data.rating : null;
+        },
+
+        getComments: async (recipeID) => {
+            const response = await fetch(`${API_BASE_URL}/recipes/${recipeID}/comments`);
+            const data = await handleResponse(response);
+            return Array.isArray(data) ? data : [];
+        },
+
+        createComment: async (recipeID, content) => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                throw new Error('You must be logged in to comment on this recipe');
+            }
+            const response = await fetch(`${API_BASE_URL}/recipes/${recipeID}/comments`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ content })
+            });
+            return handleResponse(response);
         }
     };
 
@@ -1332,10 +1535,196 @@
         );
     }
 
+    function RatingDisplay({ stats }) {
+        if (!stats) return null;
+
+        const maxRatings = Math.max(...Object.values(stats.rating_breakdown || {}), 1);
+
+        return (
+            <div className="rating-section">
+                <div className="rating-header">
+                    <h3>⭐ Ratings</h3>
+                </div>
+                <div className="rating-display">
+                    <div className="rating-info">
+                        <div className="rating-average">{stats.average_rating.toFixed(1)}</div>
+                        <div className="rating-count">{stats.total_ratings} rating{stats.total_ratings !== 1 ? 's' : ''}</div>
+                    </div>
+                    <div className="rating-breakdown">
+                        {[5, 4, 3, 2, 1].map(stars => (
+                            <div key={stars} className="breakdown-row">
+                                <span style={{ width: '30px' }}>{stars}★</span>
+                                <div className="breakdown-bar">
+                                    <div 
+                                        className="breakdown-bar-fill"
+                                        style={{ width: `${(stats.rating_breakdown?.[stars] || 0) / maxRatings * 100}%` }}
+                                    ></div>
+                                </div>
+                                <span style={{ width: '30px', textAlign: 'right', fontSize: '0.85rem' }}>
+                                    {stats.rating_breakdown?.[stars] || 0}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    function RatingInput({ recipeID, user, onRated }) {
+        const [rating, setRating] = useState(0);
+        const [hoverRating, setHoverRating] = useState(0);
+        const [loading, setLoading] = useState(false);
+
+        useEffect(() => {
+            if (user && recipeID) {
+                api.getUserRating(recipeID)
+                    .then(r => setRating(r || 0))
+                    .catch(err => console.error('Failed to load rating:', err));
+            }
+        }, [user, recipeID]);
+
+        const handleSubmit = async () => {
+            if (!rating) {
+                alert('Please select a rating');
+                return;
+            }
+            setLoading(true);
+            try {
+                await api.createOrUpdateRating(recipeID, rating);
+                onRated();
+            } catch (err) {
+                alert(err.message || 'Failed to save rating');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (!user) {
+            return (
+                <div className="your-rating" style={{ textAlign: 'center', opacity: 0.6 }}>
+                    <p>Sign in to rate this recipe</p>
+                </div>
+            );
+        }
+
+        return (
+            <div className="your-rating">
+                <h4>Your Rating</h4>
+                <div className="rating-input">
+                    <div className="rating-stars">
+                        {[1, 2, 3, 4, 5].map(star => (
+                            <span
+                                key={star}
+                                className={`star ${(hoverRating || rating) >= star ? 'filled' : 'empty'}`}
+                                onMouseEnter={() => setHoverRating(star)}
+                                onMouseLeave={() => setHoverRating(0)}
+                                onClick={() => setRating(star)}
+                            >
+                                ★
+                            </span>
+                        ))}
+                    </div>
+                    <button 
+                        className="btn btn-primary btn-sm"
+                        onClick={handleSubmit}
+                        disabled={loading || !rating}
+                    >
+                        {loading ? 'Saving...' : 'Save Rating'}
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    function CommentsSection({ recipeID, user, comments: initialComments, onCommented }) {
+        const [comments, setComments] = useState(initialComments || []);
+        const [newComment, setNewComment] = useState('');
+        const [loading, setLoading] = useState(false);
+
+        useEffect(() => {
+            if (recipeID) {
+                api.getComments(recipeID)
+                    .then(data => setComments(data))
+                    .catch(err => console.error('Failed to load comments:', err));
+            }
+        }, [recipeID]);
+
+        const handleAddComment = async (e) => {
+            e.preventDefault();
+            if (!newComment.trim()) return;
+
+            setLoading(true);
+            try {
+                await api.createComment(recipeID, newComment);
+                setNewComment('');
+                const updated = await api.getComments(recipeID);
+                setComments(updated);
+                onCommented();
+            } catch (err) {
+                alert(err.message || 'Failed to add comment');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        return (
+            <div className="comments-section">
+                <h3>💬 Comments ({comments.length})</h3>
+                
+                {user && (
+                    <form onSubmit={handleAddComment} style={{ marginBottom: '2rem' }}>
+                        <textarea
+                            className="form-textarea"
+                            placeholder="Add a comment..."
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            style={{ minHeight: '80px', marginBottom: '1rem' }}
+                        />
+                        <button 
+                            type="submit" 
+                            className="btn btn-primary"
+                            disabled={loading || !newComment.trim()}
+                        >
+                            {loading ? 'Posting...' : 'Post Comment'}
+                        </button>
+                    </form>
+                )}
+
+                {comments.length === 0 ? (
+                    <p style={{ color: 'var(--charcoal)', opacity: 0.6 }}>No comments yet. Be the first!</p>
+                ) : (
+                    <div>
+                        {comments.map(comment => (
+                            <div key={comment.id} className="comment-item">
+                                <div className="comment-header">
+                                    <span className="comment-author">{comment.username || 'Anonymous'}</span>
+                                    <span className="comment-time">{new Date(comment.created_at).toLocaleDateString()}</span>
+                                </div>
+                                <div className="comment-content">{comment.content}</div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
     function RecipeDetail({ recipe, user, onClose, onEdit, onDelete, onRefresh }) {
         const [deleting, setDeleting] = useState(false);
+        const [ratingStats, setRatingStats] = useState(null);
+        const [loadingStats, setLoadingStats] = useState(true);
         const totalTime = (recipe.prep_time_min || 0) + (recipe.cook_time_min || 0);
         const ingredients = recipe.ingredients || [];
+
+        useEffect(() => {
+            if (recipe.id) {
+                api.getRatingStats(recipe.id)
+                    .then(data => setRatingStats(data))
+                    .catch(err => console.error('Failed to load rating stats:', err))
+                    .finally(() => setLoadingStats(false));
+            }
+        }, [recipe.id]);
 
         const handleDelete = async () => {
             if (!window.confirm('Delete this recipe?')) return;
@@ -1349,6 +1738,12 @@
             } finally {
                 setDeleting(false);
             }
+        };
+
+        const handleRated = async () => {
+            // Refresh rating stats
+            const data = await api.getRatingStats(recipe.id);
+            setRatingStats(data);
         };
 
         return (
@@ -1396,6 +1791,14 @@
                                 <h3>👨‍🍳 Instructions</h3>
                                 <div className="recipe-instructions">{recipe.instructions}</div>
                             </div>
+                        )}
+
+                        {!loadingStats && ratingStats && (
+                            <>
+                                <RatingDisplay stats={ratingStats} />
+                                <RatingInput recipeID={recipe.id} user={user} onRated={handleRated} />
+                                <CommentsSection recipeID={recipe.id} user={user} onCommented={handleRated} />
+                            </>
                         )}
                     </div>
                 </div>
@@ -1516,7 +1919,12 @@
         useEffect(() => {
             const storedUser = localStorage.getItem('user');
             if (storedUser) {
-                setUser(JSON.parse(storedUser));
+                try {
+                    setUser(JSON.parse(storedUser));
+                } catch (err) {
+                    console.error('Failed to parse stored user:', err);
+                    localStorage.removeItem('user');
+                }
             }
             loadRecipes();
         }, []);
@@ -1592,14 +2000,14 @@
             try {
                 const data = await api.searchByIngredients(ingredients, useAdvanced, 20, minScore);
                 
-                if (data.advanced_matches && data.advanced_matches.length > 0) {
+                if (data && data.advanced_matches && data.advanced_matches.length > 0) {
                     const recipesWithMatches = data.advanced_matches.map(match => ({
                         ...match.recipe,
                         _matchDetails: match.match_details,
                         _matchScore: match.overall_score
                     }));
                     setRecipes(recipesWithMatches);
-                } else if (data.recipes && data.recipes.length > 0) {
+                } else if (data && data.recipes && data.recipes.length > 0) {
                     setRecipes(data.recipes);
                 } else {
                     setRecipes([]);
