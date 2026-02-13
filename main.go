@@ -42,9 +42,6 @@ func main() {
 	}
 	defer database.Close()
 
-	activityLogger := logger.NewActivityLogger()
-	defer activityLogger.Close()
-
 	if err := db.Migrate(database); err != nil {
 		log.Fatal("Database migrate failed:", err)
 	}
@@ -58,6 +55,7 @@ func main() {
 	userRepo := repository.NewUserRepository(database)
 	recipeRepo := repository.NewRecipeRepository(database)
 	ratingRepo := repository.NewRatingRepository(database)
+	activityLogger := logger.NewActivityLogger()
 	searchService := recipe.NewSearchService(recipeRepo)
 	enhancedSearchService := recipe.NewEnhancedSearchService(recipeRepo)
 	authService := auth.NewService(jwtSecret)
@@ -95,7 +93,6 @@ func main() {
 	router.HandleFunc("/api/recipes/{id:[0-9]+}", recipeHandler.GetRecipe).Methods("GET")
 	router.HandleFunc("/api/ingredients", recipeHandler.ListIngredients).Methods("GET")
 
-	// Register all public endpoints BEFORE subrouters to ensure they take priority
 	router.HandleFunc("/api/recipes/search/advanced", recipeHandler.AdvancedIngredientSearch).Methods("POST")
 	router.HandleFunc("/api/ingredients/{name}/substitutes", recipeHandler.GetIngredientSubstitutes).Methods("GET")
 	router.HandleFunc("/api/ingredients/{name}/synonyms", recipeHandler.GetIngredientSynonyms).Methods("GET")

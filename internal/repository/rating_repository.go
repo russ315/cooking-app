@@ -76,13 +76,9 @@ func (r *RatingRepository) GetRatingsByRecipe(recipeID int) ([]*models.Rating, e
 		var rating models.Rating
 		if err := rows.Scan(&rating.ID, &rating.RecipeID, &rating.UserID,
 			&rating.Rating, &rating.CreatedAt, &rating.UpdatedAt); err != nil {
-			return nil, err
+			continue
 		}
 		ratings = append(ratings, &rating)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
 	}
 
 	return ratings, nil
@@ -134,14 +130,9 @@ func (r *RatingRepository) GetRatingStats(recipeID int) (*models.RatingStats, er
 
 	for rows.Next() {
 		var rating, count int
-		if err := rows.Scan(&rating, &count); err != nil {
-			return nil, err
+		if err := rows.Scan(&rating, &count); err == nil {
+			stats.RatingBreakdown[rating] = count
 		}
-		stats.RatingBreakdown[rating] = count
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
 	}
 
 	return stats, nil
@@ -165,10 +156,7 @@ func (r *RatingRepository) CreateComment(recipeID, userID int, content string) (
 		return nil, err
 	}
 
-	err = r.db.QueryRow("SELECT username FROM users WHERE id = $1", userID).Scan(&username)
-	if err != nil {
-		return nil, err
-	}
+	r.db.QueryRow("SELECT username FROM users WHERE id = $1", userID).Scan(&username)
 
 	return &models.Comment{
 		ID:        id,
@@ -198,13 +186,9 @@ func (r *RatingRepository) GetCommentsByRecipe(recipeID int) ([]*models.Comment,
 		var comment models.Comment
 		if err := rows.Scan(&comment.ID, &comment.RecipeID, &comment.UserID,
 			&comment.Username, &comment.Content, &comment.CreatedAt, &comment.UpdatedAt); err != nil {
-			return nil, err
+			continue
 		}
 		comments = append(comments, &comment)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
 	}
 
 	return comments, nil
@@ -273,11 +257,7 @@ func (r *RatingRepository) DeleteComment(id, userID int) error {
 		return err
 	}
 
-	n, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-
+	n, _ := res.RowsAffected()
 	if n == 0 {
 		return ErrCommentNotFound
 	}

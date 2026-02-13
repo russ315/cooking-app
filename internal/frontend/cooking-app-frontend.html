@@ -1854,9 +1854,7 @@
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                         />
-                    </form>
-                </div>
-
+                
                 <div className="search-controls">
                     <div className="search-options">
                         <div className="toggle-container">
@@ -1880,11 +1878,12 @@
                             />
                         </div>
                     </div>
+                    </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button 
                             className="btn btn-primary" 
                             onClick={handleSearch}
-                            disabled={ingredients.length === 0 || loading}
+                            
                         >
                             {loading ? 'Searching...' : 'Find Recipes'}
                         </button>
@@ -1898,6 +1897,7 @@
                             </button>
                         )}
                     </div>
+                    </form>
                 </div>
             </div>
         );
@@ -1999,6 +1999,7 @@
             setIsSearchActive(true);
             try {
                 const data = await api.searchByIngredients(ingredients, useAdvanced, 20, minScore);
+                console.log('API response:', data);
                 
                 if (data && data.advanced_matches && data.advanced_matches.length > 0) {
                     const recipesWithMatches = data.advanced_matches.map(match => ({
